@@ -56,6 +56,11 @@
    - 選択しない場合は挨拶の次に最初の本質問を直接開始  
    - 選択しないことも可能
 
+5. **自己紹介の有無**  
+   - 面接の最初に自己紹介を求めるかどうかを選択  
+   - 選択しない場合はアイスブレイクまたは本質問へ直接開始  
+   - 選択しないことも可能
+
 ### 2.2 AI面接練習画面
 - 面接練習開始画面で設定した内容に基づき、AI面接を実施
 - 画面はリロードやページ遷移を挟まずに進行
@@ -94,13 +99,15 @@
 | interviewer_role | TEXT | 面接官役職（例：人事担当、現場責任者など） | YES |
 | question_count | INTEGER | 質問数（5, 10, 15のいずれか） | NO |
 | include_ice_break | BOOLEAN | アイスブレイク実施有無 | NO |
-| status | ENUM('CREATED','GREETING','ICE_BREAK','MAIN','CLOSING','PAUSED','COMPLETED','TERMINATED') | 実施状態 | NO |
+| include_self_introduction | BOOLEAN | 自己紹介実施有無 | NO |
+| status | ENUM('CREATED','GREETING','SELF_INTRODUCTION','ICE_BREAK','MAIN','CLOSING','PAUSED','COMPLETED','TERMINATED') | 実施状態 | NO |
 | started_at | TIMESTAMP | 開始日時 | NO |
 | ended_at | TIMESTAMP | 終了日時 | YES |
 
 > **セッションステータスの定義**
 > - CREATED: セッション作成直後の初期状態
 > - GREETING: 挨拶フェーズ実施中
+> - SELF_INTRODUCTION: 自己紹介フェーズ実施中
 > - ICE_BREAK: アイスブレイクフェーズ実施中
 > - MAIN: 主要質問フェーズ実施中
 > - CLOSING: 終了フェーズ実施中
@@ -149,7 +156,8 @@
     "interview_phase": "string（面接フェーズ。例：一次面接、最終面接など）",
     "interviewer_role": "string（面接官役職。例：人事担当、現場責任者など）",
     "question_count": "integer（5, 10, 15のいずれか）",
-    "include_ice_break": "boolean"
+    "include_ice_break": "boolean",
+    "include_self_introduction": "boolean"
 }
 ```
 
@@ -176,13 +184,52 @@
   - `include_ice_break`: 
     - 必須
     - true/falseのいずれかであること
+  - `include_self_introduction`: 
+    - 必須
+    - true/falseのいずれかであること
 
 > **補足**
 > - セッション作成時のステータスは必ず`GREETING`から開始
-> - `include_ice_break`がfalseの場合、GREETINGの次はMAINに遷移
+> - 面接の進行順序：GREETING → [SELF_INTRODUCTION] → [ICE_BREAK] → MAIN → CLOSING
+> - `include_self_introduction`と`include_ice_break`の値に応じてリクエスト先のAPIが変化
+>   - `include_self_introduction: true`の場合：greeting API → self-introduction API → ...
+>   - `include_ice_break: true`の場合：[self-introduction API →] ice-break API → main API
+>   - 両方`false`の場合：greeting API → main API
 > - `company_id`と`job_posting_id`は任意だが、`job_posting_id`を指定する場合は`company_id`も必須
 > - 作成成功時は自動的に面接練習画面へ遷移
 > - `interview_phase`と`interviewer_role`は自由入力可能（画面上ではプルダウンと直接入力の併用）
+
+#### GET /api/v1/interview-sessions/{session_id}/greeting
+面接開始時の挨拶を取得
+
+- レスポンスボディ
+```json
+{
+    "question": {
+        "id": "uuid",
+        "content": "はじめまして。本日は面接にお時間をいただき、ありがとうございます。私は面接官の○○と申します。よろしくお願いいたします。",
+        "sequence": 1
+    },
+    "next_status": "SELF_INTRODUCTION or ICE_BREAK or MAIN",
+    "audio_enabled": true
+}
+```
+
+- ステータスコード
+  - 200: 取得成功
+  - 401: 認証エラー
+  - 404: セッションが存在しない
+  - 409: セッションのステータスが不正（CREATED以外）
+  - 500: サーバーエラー
+
+> **補足**
+> - セッションのステータスが`CREATED`の場合のみ呼び出し可能
+> - 挨拶文は面接官の役職や面接フェーズに応じて適切に生成
+> - `next_status`は設定値に応じて以下のように変化
+>   - `include_self_introduction: true`の場合：SELF_INTRODUCTION
+>   - `include_self_introduction: false`かつ`include_ice_break: true`の場合：ICE_BREAK
+>   - 両方`false`の場合：MAIN
+> - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
 
 #### POST /api/v1/interview-sessions/{session_id}/qa
 質問への回答を送信
