@@ -100,7 +100,7 @@
 | question_count | INTEGER | 質問数（5, 10, 15のいずれか） | NO |
 | include_self_introduction | BOOLEAN | 自己紹介実施有無 | NO |
 | include_ice_break | BOOLEAN | アイスブレイク実施有無 | NO |
-| status | ENUM('CREATED','GREETING','SELF_INTRODUCTION','ICE_BREAK','MAIN','CLOSING','PAUSED','COMPLETED','TERMINATED') | 実施状態 | NO |
+| status | ENUM('CREATED','GREETING','SELF_INTRODUCTION','ICE_BREAK','MAIN','PAUSED','COMPLETED','TERMINATED','CLOSING') | 実施状態 | NO |
 | started_at | TIMESTAMP | 開始日時 | NO |
 | ended_at | TIMESTAMP | 終了日時 | YES |
 
@@ -110,12 +110,24 @@
 > - SELF_INTRODUCTION: 自己紹介フェーズ実施中
 > - ICE_BREAK: アイスブレイクフェーズ実施中
 > - MAIN: 主要質問フェーズ実施中
-> - CLOSING: 終了フェーズ実施中
 > - PAUSED: 一時中断中（再開可能）
 > - COMPLETED: 全質問完了による正常終了
-> - TERMINATED: 途中終了（ユーザーによる中止またはエラーによる異常終了）
->
+> - TERMINATED: 面接の途中終了（一時中断からの中止、またはエラーによる異常終了）
+> - CLOSING: 面接セッションの最終状態（フィードバック完了後、または定期クリーンアップ対象）
+
 > ※ステータスはENUM型で管理し、アプリケーション全体で一貫性のある値を使用します。
+
+> **ステータス遷移の補足**
+> - 正常終了：MAIN → COMPLETED → (フィードバック) → CLOSING
+> - 中断からの終了：PAUSED → TERMINATED
+> - エラー時：任意のステータス → TERMINATED
+> - 定期クリーンアップ：COMPLETED/TERMINATED → CLOSING
+> - フィードバック完了：COMPLETED → CLOSING
+
+> **補足**
+> - セッション作成時のステータスは必ず`GREETING`から開始
+> - 面接の進行順序：GREETING → [SELF_INTRODUCTION] → [ICE_BREAK] → MAIN → COMPLETED → (フィードバック) → CLOSING
+> - 一時中断した場合：PAUSED → (再開) → 元のステータス or (中止) → TERMINATED
 
 ### 3.2 面接質問テーブル (interview_questions)
 | カラム名 | 型 | 説明 | NULL |
@@ -190,7 +202,8 @@
 
 > **補足**
 > - セッション作成時のステータスは必ず`GREETING`から開始
-> - 面接の進行順序：GREETING → [SELF_INTRODUCTION] → [ICE_BREAK] → MAIN → CLOSING
+> - 面接の進行順序：GREETING → [SELF_INTRODUCTION] → [ICE_BREAK] → MAIN → COMPLETED → (フィードバック) → CLOSING
+>   - 一時中断した場合：PAUSED → (再開) → 元のステータス or (中止) → TERMINATED
 > - `include_self_introduction`と`include_ice_break`の値に応じてリクエスト先のAPIが変化
 >   - `include_self_introduction: true`の場合：greeting API → self-introduction API → ...
 >   - `include_ice_break: true`の場合：[self-introduction API →] ice-break API → main API
@@ -340,7 +353,7 @@
 - レスポンス（最後の質問への回答を受け取った場合）
 ```json
 {
-    "status": "CLOSING",
+    "status": "COMPLETED",
     "next_question": null,
     "remaining_questions": 0,
     "should_end_session": true
@@ -372,28 +385,9 @@
 >   - 挨拶（1問）、自己紹介（設定に応じて1問）、アイスブレイク（設定に応じて1問）を含めて`question_count`を計算
 >   - 例：`question_count: 5`、`include_self_introduction: true`、`include_ice_break: true`の場合
 >     - 挨拶(1) + 自己紹介(1) + アイスブレイク(1) + 主質問(2)で合計5問
-> - `should_end_session`が`true`の場合は次の質問を生成せず、クライアントは直接`/end`APIを呼び出して面接練習完了画面へ遷移
+> - 最後の質問への回答を受け取った時点で、セッションのステータスを`COMPLETED`に更新
+> - `should_end_session`が`true`の場合は次の質問を生成せず、クライアントは直接面接練習完了画面へ遷移
 > - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
-
-#### PUT /api/v1/interview-sessions/{session_id}/end
-面接セッションを終了
-
-- レスポンス
-```json
-{
-    "session_summary": {
-        "total_questions": 10,
-        "completed_questions": 8,
-        "session_duration": "25分",
-        "qa_history": [
-            {
-                "question": "質問内容",
-                "answer": "回答内容"
-            }
-        ]
-    }
-}
-```
 
 ### 4.2 音声処理API
 
@@ -429,35 +423,6 @@
 ```json
 {
     "audio_data": "base64エンコードされた音声データ"
-}
-```
-
-### 4.3 セッション履歴API
-
-#### GET /api/v1/interview-sessions/{session_id}
-セッションの詳細情報を取得
-
-- レスポンス
-```json
-{
-    "session_details": {
-        "id": "uuid",
-        "interview_phase": "FIRST",
-        "interviewer_role": "HR_MANAGER",
-        "started_at": "2024-01-01T00:00:00Z",
-        "ended_at": "2024-01-01T00:30:00Z",
-        "questions": [
-            {
-                "id": "uuid",
-                "content": "質問内容",
-                "sequence": 1,
-                "created_at": "2024-01-01T00:05:00Z",
-                "answer": {
-                    "content": "回答内容"
-                }
-            }
-        ]
-    }
 }
 ```
 
