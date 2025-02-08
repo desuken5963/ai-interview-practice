@@ -1,53 +1,80 @@
 # 面接練習機能
 
 ## 1. 概要
-テキストチャットおよび音声通話形式での面接練習、AIによる評価・フィードバック機能の基本設計を記載する。
+テキストチャットおよび音声通話形式での、AI面接練習機能の基本設計を記載する。
 
 ## 2. 画面設計
 
 ### 2.1 面接練習開始画面
-- 練習モード選択（テキスト/音声）
-- 企業・求人情報の選択（任意）
-  - 指定無し
-  - 企業指定
-  - 求人指定
-- 面接設定項目(必須)
-  - 面接の種類（一次面接、最終面接など）
-  - 面接時間目安（15分、30分など）
-  - 面接官の性格（フレンドリー、厳格など）
 
-### 2.2 面接画面
-- 面接官キャラクター表示エリア
-  - アニメーションステート（待機/話す/聞く/考える）
-  - 表情変化
-- 対話エリア
-  - 面接官（AI）の発言表示
-  - ユーザーの回答表示/入力
-    - テキストモード: 入力フォーム
-    - 音声モード: 音声入力UI
-- ステータス表示
-  - 経過時間
-  - 残り想定質問数
-  - 音声認識状態（音声モード時）
-- コントロール
-  - 一時停止/再開
-  - 音声入力ON/OFF
-  - 終了
+#### 2.1.1 企業・求人設定
+- **企業情報の指定**
+  - 登録済みの企業 (companies テーブル) から選択可能
+  - 企業を指定しないことも可能
 
-### 2.3 音声面接画面
-- 音声入力/出力状態表示
-- 音声認識テキストのリアルタイム表示
-- マイク/スピーカー設定
-- 経過時間表示
-- 面接終了ボタン
-- 一時停止/再開ボタン
+- **求人情報の指定**
+  - 企業を選択している場合、その企業に紐づく求人 (job_postings テーブル) から選択可能
+  - 企業を指定していない場合は選択不可
+  - 指定しないことも可能
 
-### 2.4 評価・フィードバック画面
-- 総合評価（レーダーチャート）
-- 質問別スコア一覧
-- AIからの改善アドバイス
-- 練習履歴への保存ボタン
-- 新規練習開始ボタン
+#### 2.1.2 面接方法の選択
+- **テキスト**  
+  - 面接官の質問を画面に表示
+  - 画面下部のテキスト入力欄に回答を入力  
+  - 入力内容をテキストとして API に送信
+
+- **音声**  
+  - 面接官の質問を画面に表示すると同時に、外部 API 等を利用して音声で読み上げ  
+  - 画面下部の録音ボタン（REC On/Off）で回答を録音し、録音データをテキスト変換して API に送信  
+
+> **注意点**  
+> - ユーザーの音声回答は最終的にテキスト化し、プロンプトの一部として AI へ送信する  
+> - 音声合成・音声認識は外部 API を利用する想定  
+
+#### 2.1.3 面接設定
+1. **質問数**  
+   - 面接で行う質問の回数  
+   - 選択肢: 5問 / 10問 / 15問  
+   - 面接時間の目安はこの質問数に基づき想定
+   - 必須選択事項
+
+2. **想定面接官の役職**  
+   - 例: 「人事担当」「現場責任者」「経営者」など  
+   - 未選択のままでも可
+
+3. **想定面接フェーズ (シチュエーション)**  
+   - 以下のいずれかを選択  
+     - 一次面接  
+     - 二次面接  
+     - 最終面接  
+     - 圧迫面接  
+     - インターン面接  
+   - 未選択も可能
+
+### 2.2 AI面接練習画面
+- 面接練習開始画面で設定した内容に基づき、AI面接を実施
+- 画面はリロードやページ遷移を挟まずに進行
+
+#### 2.2.1 質問表示
+- 画面中央に「AI面接官の質問テキスト」を表示
+- 音声面接の場合は同時に読み上げを実行
+
+#### 2.2.2 回答入力
+- **テキスト面接**  
+  - 画面下部のテキスト入力欄に回答を入力  
+  - 送信ボタン押下で回答をAI APIに送信
+
+- **音声面接**  
+  - 画面下部の録音ボタンを押下して回答を録音  
+  - 録音終了後、録音データをテキストに変換し、AI APIに送信
+
+#### 2.2.3 面接継続
+- 1問ごとに「AIの質問 → ユーザー回答」というサイクルを繰り返す
+- 選択した「質問数」に達するか、ユーザーが中断した場合に面接を終了
+
+### 2.3 AI面接練習完了画面
+- 面接終了後に「AI面接練習が完了した」旨を表示
+- 必要に応じて振り返り要素（回答のテキスト一覧など）を表示することを検討
 
 ## 3. データ構造
 
@@ -58,10 +85,10 @@
 | user_id | UUID | ユーザーID (FK) | NO |
 | company_id | UUID | 企業ID (FK) | YES |
 | job_posting_id | UUID | 求人ID (FK) | YES |
-| interview_type | VARCHAR(20) | 面接種類 | NO |
+| interview_phase | VARCHAR(20) | 面接フェーズ | YES |
+| interviewer_role | VARCHAR(50) | 面接官役職 | YES |
 | mode | VARCHAR(10) | テキスト/音声 | NO |
-| duration_minutes | INTEGER | 面接時間（分） | NO |
-| interviewer_personality | VARCHAR(20) | 面接官タイプ | NO |
+| question_count | INTEGER | 質問数 | NO |
 | status | VARCHAR(20) | 実施状態 | NO |
 | started_at | TIMESTAMP | 開始日時 | NO |
 | ended_at | TIMESTAMP | 終了日時 | YES |
@@ -99,10 +126,10 @@
 {
     "company_id": "uuid（任意）",
     "job_posting_id": "uuid（任意）",
-    "interview_type": "FIRST",
+    "interview_phase": "FIRST",
+    "interviewer_role": "HR_MANAGER",
     "mode": "TEXT",
-    "duration_minutes": 30,
-    "interviewer_personality": "FRIENDLY"
+    "question_count": 10
 }
 ```
 
@@ -135,15 +162,9 @@
 - レスポンス
 ```json
 {
-    "evaluation": {
-        "scores": {
-            "logic": 85,
-            "clarity": 90,
-            "relevance": 75
-        },
-        "feedback": "フィードバックコメント"
-    },
-    "next_question": "次の質問内容"
+    "next_question": "次の質問内容",
+    "remaining_questions": 5,
+    "session_status": "IN_PROGRESS"
 }
 ```
 
@@ -154,45 +175,57 @@
 ```json
 {
     "session_summary": {
-        "duration": "25分",
-        "question_count": 8,
-        "overall_score": 85,
-        "category_scores": {
-            "logic": 80,
-            "clarity": 90,
-            "relevance": 85
-        },
-        "improvement_points": [
-            "改善ポイント1",
-            "改善ポイント2"
+        "total_questions": 10,
+        "completed_questions": 8,
+        "session_duration": "25分",
+        "qa_history": [
+            {
+                "question": "質問内容",
+                "answer": "回答内容"
+            }
         ]
     }
 }
 ```
 
-### 4.2 音声認識Websocket API
+### 4.2 音声処理API
 
-#### WS /api/v1/interview-sessions/{session_id}/voice
-音声データのストリーミング処理用Websocket接続
+#### POST /api/v1/speech-to-text
+音声データをテキストに変換
 
-- クライアントからサーバーへのメッセージ
+- リクエストボディ
 ```json
 {
-    "type": "audio_data",
-    "data": "base64エンコードされた音声データ"
+    "audio_data": "base64エンコードされた音声データ"
 }
 ```
 
-- サーバーからクライアントへのメッセージ
+- レスポンス
 ```json
 {
-    "type": "recognition_result",
-    "text": "認識されたテキスト",
-    "is_final": true
+    "text": "変換されたテキスト",
+    "confidence": 0.95
 }
 ```
 
-### 4.3 評価履歴API
+#### POST /api/v1/text-to-speech
+テキストを音声に変換
+
+- リクエストボディ
+```json
+{
+    "text": "音声化するテキスト"
+}
+```
+
+- レスポンス
+```json
+{
+    "audio_data": "base64エンコードされた音声データ"
+}
+```
+
+### 4.3 セッション履歴API
 
 #### GET /api/v1/interview-sessions/{session_id}
 セッションの詳細情報を取得
@@ -202,36 +235,17 @@
 {
     "session_details": {
         "id": "uuid",
-        "interview_type": "FIRST",
+        "interview_phase": "FIRST",
+        "interviewer_role": "HR_MANAGER",
         "mode": "TEXT",
         "started_at": "2024-01-01T00:00:00Z",
         "ended_at": "2024-01-01T00:30:00Z",
         "qa_logs": [
             {
                 "question": "質問内容",
-                "answer": "回答内容",
-                "evaluation": {
-                    "scores": {
-                        "logic": 85,
-                        "clarity": 90,
-                        "relevance": 75
-                    },
-                    "feedback": "フィードバック内容"
-                }
+                "answer": "回答内容"
             }
-        ],
-        "overall_evaluation": {
-            "total_score": 85,
-            "category_scores": {
-                "logic": 80,
-                "clarity": 90,
-                "relevance": 85
-            },
-            "improvement_suggestions": [
-                "改善提案1",
-                "改善提案2"
-            ]
-        }
+        ]
     }
 }
 ```
@@ -243,25 +257,26 @@
 あなたは面接官として以下の設定で面接を行います：
 - 企業: {company_name}
 - 求人: {job_title}
-- 面接タイプ: {interview_type}
-- 面接官の性格: {interviewer_personality}
+- 面接フェーズ: {interview_phase}
+- 面接官役職: {interviewer_role}
 
 以下の情報を参考に、適切な質問を生成してください：
 - 企業の事業内容: {business_description}
 - 求人の詳細: {job_description}
 - 面接の進行状況: {current_progress}
+- 残り質問数: {remaining_questions}
 ```
 
 ### 5.2 回答評価プロンプト
 ```text
-以下の回答を評価し、各項目でスコアとフィードバックを提供してください：
+以下の回答を評価してください：
 
 質問: {question}
 回答: {answer}
 
 評価項目：
-1. 論理性（構成、説得力）
-2. 明確性（簡潔さ、わかりやすさ）
-3. 関連性（質問との適合性）
-4. ポジティブ度（前向きさ、意欲）
+1. 回答の適切性（質問意図との合致）
+2. 説明の明確さ
+3. 具体性
+4. 態度・意欲
 ``` 
