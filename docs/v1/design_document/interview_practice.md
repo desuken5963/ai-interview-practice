@@ -51,9 +51,15 @@
      - インターン面接  
    - 未選択も可能
 
+4. **アイスブレイクの有無**  
+   - 面接の最初にアイスブレイクを実施するかどうかを選択  
+   - 選択しない場合は挨拶の次に最初の本質問を直接開始  
+   - 選択しないことも可能
+
 ### 2.2 AI面接練習画面
 - 面接練習開始画面で設定した内容に基づき、AI面接を実施
 - 画面はリロードやページ遷移を挟まずに進行
+- 面接官の質問は、面接フェーズごとに分けて管理(フェーズごとに叩くapiが変わる)
 
 #### 2.2.1 質問表示
 - 画面中央に「AI面接官の質問テキスト」を表示
@@ -82,12 +88,12 @@
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
 | id | UUID | 主キー | NO |
-| user_id | UUID | ユーザーID (FK) | NO |
 | company_id | UUID | 企業ID (FK) | YES |
 | job_posting_id | UUID | 求人ID (FK) | YES |
-| interview_phase | VARCHAR(20) | 面接フェーズ | YES |
-| interviewer_role | VARCHAR(50) | 面接官役職 | YES |
-| question_count | INTEGER | 質問数 | NO |
+| interview_phase | TEXT | 面接フェーズ（例：一次面接、最終面接など） | YES |
+| interviewer_role | TEXT | 面接官役職（例：人事担当、現場責任者など） | YES |
+| question_count | INTEGER | 質問数（5, 10, 15のいずれか） | NO |
+| include_ice_break | BOOLEAN | アイスブレイク実施有無 | NO |
 | status | ENUM('CREATED','GREETING','ICE_BREAK','MAIN','CLOSING','PAUSED','COMPLETED','TERMINATED') | 実施状態 | NO |
 | started_at | TIMESTAMP | 開始日時 | NO |
 | ended_at | TIMESTAMP | 終了日時 | YES |
@@ -133,33 +139,50 @@
 ### 4.1 面接セッションAPI
 
 #### POST /api/v1/interview-sessions
-面接セッションを開始
+面接セッションを開始し、面接練習画面へ遷移するためのセッション情報を作成
 
 - リクエストボディ
 ```json
 {
     "company_id": "uuid（任意）",
     "job_posting_id": "uuid（任意）",
-    "interview_phase": "FIRST",
-    "interviewer_role": "HR_MANAGER",
-    "question_count": 10,
-    "include_ice_break": true
+    "interview_phase": "string（面接フェーズ。例：一次面接、最終面接など）",
+    "interviewer_role": "string（面接官役職。例：人事担当、現場責任者など）",
+    "question_count": "integer（5, 10, 15のいずれか）",
+    "include_ice_break": "boolean"
 }
 ```
 
-- レスポンス
-```json
-{
-    "session_id": "uuid",
-    "status": "GREETING",
-    "initial_question": {
-        "id": "uuid",
-        "content": "はじめまして。本日は面接にお時間をいただき、ありがとうございます。",
-        "sequence": 1
-    },
-    "started_at": "2024-01-01T00:00:00Z"
-}
-```
+- ステータスコード
+  - 201: 作成成功
+  - 400: リクエストパラメータ不正
+  - 401: 認証エラー
+  - 500: サーバーエラー
+
+- バリデーション
+  - `company_id`: 存在する企業IDであること（指定時）
+  - `job_posting_id`: 
+    - 指定時は存在する求人IDであること
+    - 指定時は`company_id`が必須で、その企業に紐づく求人であること
+  - `interview_phase`: 
+    - 任意（nullまたは空文字を許容）
+    - 指定時は最大文字数は100文字
+  - `interviewer_role`: 
+    - 任意（nullまたは空文字を許容）
+    - 指定時は最大文字数は100文字
+  - `question_count`: 
+    - 必須
+    - 5, 10, 15のいずれかであること
+  - `include_ice_break`: 
+    - 必須
+    - true/falseのいずれかであること
+
+> **補足**
+> - セッション作成時のステータスは必ず`GREETING`から開始
+> - `include_ice_break`がfalseの場合、GREETINGの次はMAINに遷移
+> - `company_id`と`job_posting_id`は任意だが、`job_posting_id`を指定する場合は`company_id`も必須
+> - 作成成功時は自動的に面接練習画面へ遷移
+> - `interview_phase`と`interviewer_role`は自由入力可能（画面上ではプルダウンと直接入力の併用）
 
 #### POST /api/v1/interview-sessions/{session_id}/qa
 質問への回答を送信
@@ -266,30 +289,4 @@
 ## 5. AIプロンプト設計
 
 ### 5.1 面接官プロンプト
-```text
-あなたは面接官として以下の設定で面接を行います：
-- 企業: {company_name}
-- 求人: {job_title}
-- 面接フェーズ: {interview_phase}
-- 面接官役職: {interviewer_role}
-
-以下の情報を参考に、適切な質問を生成してください：
-- 企業の事業内容: {business_description}
-- 求人の詳細: {job_description}
-- 面接の進行状況: {current_progress}
-- 残り質問数: {remaining_questions}
 ```
-
-### 5.2 回答評価プロンプト
-```text
-以下の回答を評価してください：
-
-質問: {question}
-回答: {answer}
-
-評価項目：
-1. 回答の適切性（質問意図との合致）
-2. 説明の明確さ
-3. 具体性
-4. 態度・意欲
-``` 
