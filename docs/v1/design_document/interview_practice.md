@@ -231,6 +231,37 @@
 >   - 両方`false`の場合：MAIN
 > - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
 
+#### GET /api/v1/interview-sessions/{session_id}/self-introduction
+自己紹介を求める質問を取得
+
+- レスポンスボディ
+```json
+{
+    "question": {
+        "id": "uuid",
+        "content": "それでは、簡単に自己紹介をお願いできますでしょうか？",
+        "sequence": 2
+    },
+    "next_status": "ICE_BREAK or MAIN",
+    "audio_enabled": true
+}
+```
+
+- ステータスコード
+  - 200: 取得成功
+  - 401: 認証エラー
+  - 404: セッションが存在しない
+  - 409: セッションのステータスが不正（GREETING以外）
+  - 500: サーバーエラー
+
+> **補足**
+> - セッションのステータスが`GREETING`の場合のみ呼び出し可能
+> - 自己紹介を求める質問文は面接官の役職や面接フェーズに応じて適切に生成
+> - `next_status`は`include_ice_break`の値に応じて変化
+>   - `include_ice_break: true`の場合：ICE_BREAK
+>   - `include_ice_break: false`の場合：MAIN
+> - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
+
 #### POST /api/v1/interview-sessions/{session_id}/qa
 質問への回答を送信
 
