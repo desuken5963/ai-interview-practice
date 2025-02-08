@@ -98,8 +98,8 @@
 | interview_phase | TEXT | 面接フェーズ（例：一次面接、最終面接など） | YES |
 | interviewer_role | TEXT | 面接官役職（例：人事担当、現場責任者など） | YES |
 | question_count | INTEGER | 質問数（5, 10, 15のいずれか） | NO |
-| include_ice_break | BOOLEAN | アイスブレイク実施有無 | NO |
 | include_self_introduction | BOOLEAN | 自己紹介実施有無 | NO |
+| include_ice_break | BOOLEAN | アイスブレイク実施有無 | NO |
 | status | ENUM('CREATED','GREETING','SELF_INTRODUCTION','ICE_BREAK','MAIN','CLOSING','PAUSED','COMPLETED','TERMINATED') | 実施状態 | NO |
 | started_at | TIMESTAMP | 開始日時 | NO |
 | ended_at | TIMESTAMP | 終了日時 | YES |
@@ -156,8 +156,8 @@
     "interview_phase": "string（面接フェーズ。例：一次面接、最終面接など）",
     "interviewer_role": "string（面接官役職。例：人事担当、現場責任者など）",
     "question_count": "integer（5, 10, 15のいずれか）",
-    "include_ice_break": "boolean",
-    "include_self_introduction": "boolean"
+    "include_self_introduction": "boolean",
+    "include_ice_break": "boolean"
 }
 ```
 
@@ -260,6 +260,35 @@
 > - `next_status`は`include_ice_break`の値に応じて変化
 >   - `include_ice_break: true`の場合：ICE_BREAK
 >   - `include_ice_break: false`の場合：MAIN
+> - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
+
+#### GET /api/v1/interview-sessions/{session_id}/ice-break
+アイスブレイク質問を取得
+
+- レスポンスボディ
+```json
+{
+    "question": {
+        "id": "uuid",
+        "content": "本題に入る前に、最近のお仕事や日常生活で楽しかったことや印象に残っていることはありますか？",
+        "sequence": 2
+    },
+    "next_status": "MAIN",
+    "audio_enabled": true
+}
+```
+
+- ステータスコード
+  - 200: 取得成功
+  - 401: 認証エラー
+  - 404: セッションが存在しない
+  - 409: セッションのステータスが不正（GREETINGまたはSELF_INTRODUCTION以外）
+  - 500: サーバーエラー
+
+> **補足**
+> - セッションのステータスが`GREETING`または`SELF_INTRODUCTION`の場合のみ呼び出し可能
+> - アイスブレイク質問は面接官の役職や面接フェーズに応じて適切に生成
+> - 次のステータスは必ず`MAIN`
 > - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
 
 #### POST /api/v1/interview-sessions/{session_id}/qa
