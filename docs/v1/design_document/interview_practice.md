@@ -87,32 +87,46 @@
 | job_posting_id | UUID | 求人ID (FK) | YES |
 | interview_phase | VARCHAR(20) | 面接フェーズ | YES |
 | interviewer_role | VARCHAR(50) | 面接官役職 | YES |
-| mode | VARCHAR(10) | テキスト/音声 | NO |
 | question_count | INTEGER | 質問数 | NO |
-| status | VARCHAR(20) | 実施状態 | NO |
+| status | ENUM('CREATED','GREETING','ICE_BREAK','MAIN','CLOSING','PAUSED','COMPLETED','TERMINATED') | 実施状態 | NO |
 | started_at | TIMESTAMP | 開始日時 | NO |
 | ended_at | TIMESTAMP | 終了日時 | YES |
 
-### 3.2 面接QAテーブル (interview_qa_logs)
+> **セッションステータスの定義**
+> - CREATED: セッション作成直後の初期状態
+> - GREETING: 挨拶フェーズ実施中
+> - ICE_BREAK: アイスブレイクフェーズ実施中
+> - MAIN: 主要質問フェーズ実施中
+> - CLOSING: 終了フェーズ実施中
+> - PAUSED: 一時中断中（再開可能）
+> - COMPLETED: 全質問完了による正常終了
+> - TERMINATED: 途中終了（ユーザーによる中止またはエラーによる異常終了）
+>
+> ※ステータスはENUM型で管理し、アプリケーション全体で一貫性のある値を使用します。
+
+### 3.2 面接質問テーブル (interview_questions)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
 | id | UUID | 主キー | NO |
 | session_id | UUID | セッションID (FK) | NO |
-| question | TEXT | 質問内容 | NO |
-| answer | TEXT | 回答内容 | NO |
-| answer_audio_url | VARCHAR(255) | 音声回答URL | YES |
-| sequence | INTEGER | 質問順序 | NO |
+| content | TEXT | 質問内容 | NO |
+| sequence | INTEGER | 質問順序（1から開始） | NO |
 | created_at | TIMESTAMP | 作成日時 | NO |
 
-### 3.3 評価スコアテーブル (interview_evaluations)
+### 3.3 面接回答テーブル (interview_answers)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
 | id | UUID | 主キー | NO |
-| qa_log_id | UUID | QAログID (FK) | NO |
-| category | VARCHAR(50) | 評価カテゴリ | NO |
-| score | INTEGER | スコア（0-100） | NO |
-| feedback | TEXT | フィードバック内容 | NO |
+| question_id | UUID | 質問ID (FK) | NO |
+| content | TEXT | 回答内容 | NO |
 | created_at | TIMESTAMP | 作成日時 | NO |
+
+> **テーブル設計の補足**
+> - 質問（interview_questions）と回答（interview_answers）を分離することで、未回答の質問の管理が容易になります
+> - 質問の順序は`sequence`で明示的に管理し、ユーザーへの提示や分析に使用します
+> - 進行状況は質問テーブルの`sequence`の最大値と`interview_sessions.question_count`の差分で把握します
+> - 回答テーブルは質問への回答が存在する場合のみレコードが作成されます
+> - 音声回答は一時的にテキスト変換のみに使用し、変換後の音声データは保持しません
 
 ## 4. API設計
 
@@ -128,8 +142,8 @@
     "job_posting_id": "uuid（任意）",
     "interview_phase": "FIRST",
     "interviewer_role": "HR_MANAGER",
-    "mode": "TEXT",
-    "question_count": 10
+    "question_count": 10,
+    "include_ice_break": true
 }
 ```
 
@@ -137,7 +151,12 @@
 ```json
 {
     "session_id": "uuid",
-    "initial_question": "最初の質問内容",
+    "status": "GREETING",
+    "initial_question": {
+        "id": "uuid",
+        "content": "はじめまして。本日は面接にお時間をいただき、ありがとうございます。",
+        "sequence": 1
+    },
     "started_at": "2024-01-01T00:00:00Z"
 }
 ```
@@ -145,26 +164,16 @@
 #### POST /api/v1/interview-sessions/{session_id}/qa
 質問への回答を送信
 
-- リクエストボディ（テキストモード）
-```json
-{
-    "answer": "回答テキスト"
-}
-```
-
-- リクエストボディ（音声モード）
-```json
-{
-    "audio_data": "base64エンコードされた音声データ"
-}
-```
-
 - レスポンス
 ```json
 {
-    "next_question": "次の質問内容",
-    "remaining_questions": 5,
-    "session_status": "IN_PROGRESS"
+    "status": "MAIN",
+    "next_question": {
+        "id": "uuid",
+        "content": "次の質問内容",
+        "sequence": 1
+    },
+    "remaining_questions": 5
 }
 ```
 
@@ -237,13 +246,17 @@
         "id": "uuid",
         "interview_phase": "FIRST",
         "interviewer_role": "HR_MANAGER",
-        "mode": "TEXT",
         "started_at": "2024-01-01T00:00:00Z",
         "ended_at": "2024-01-01T00:30:00Z",
-        "qa_logs": [
+        "questions": [
             {
-                "question": "質問内容",
-                "answer": "回答内容"
+                "id": "uuid",
+                "content": "質問内容",
+                "sequence": 1,
+                "created_at": "2024-01-01T00:05:00Z",
+                "answer": {
+                    "content": "回答内容"
+                }
             }
         ]
     }
