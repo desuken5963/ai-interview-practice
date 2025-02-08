@@ -231,24 +231,33 @@
 >   - 両方`false`の場合：MAIN
 > - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
 
-#### GET /api/v1/interview-sessions/{session_id}/self-introduction
-自己紹介を求める質問を取得
+#### POST /api/v1/interview-sessions/{session_id}/self-introduction
+挨拶フェーズの回答を送信し、自己紹介の質問を取得
 
-- レスポンスボディ
+- リクエストボディ
 ```json
 {
-    "question": {
+    "previous_answer": "挨拶への回答内容のテキスト",
+    "current_status": "GREETING"
+}
+```
+
+- レスポンス
+```json
+{
+    "status": "SELF_INTRODUCTION",
+    "next_question": {
         "id": "uuid",
-        "content": "それでは、簡単に自己紹介をお願いできますでしょうか？",
+        "content": "自己紹介の質問内容",
         "sequence": 2
     },
-    "next_status": "ICE_BREAK or MAIN",
     "audio_enabled": true
 }
 ```
 
 - ステータスコード
-  - 200: 取得成功
+  - 200: 送信成功
+  - 400: リクエストパラメータ不正
   - 401: 認証エラー
   - 404: セッションが存在しない
   - 409: セッションのステータスが不正（GREETING以外）
@@ -256,30 +265,36 @@
 
 > **補足**
 > - セッションのステータスが`GREETING`の場合のみ呼び出し可能
-> - 自己紹介を求める質問文は面接官の役職や面接フェーズに応じて適切に生成
-> - `next_status`は`include_ice_break`の値に応じて変化
->   - `include_ice_break: true`の場合：ICE_BREAK
->   - `include_ice_break: false`の場合：MAIN
+> - 回答内容は最大10000文字まで許容
 > - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
 
-#### GET /api/v1/interview-sessions/{session_id}/ice-break
-アイスブレイク質問を取得
+#### POST /api/v1/interview-sessions/{session_id}/ice-break
+挨拶フェーズまたは自己紹介フェーズの回答を送信し、アイスブレイクの質問を取得
 
-- レスポンスボディ
+- リクエストボディ
 ```json
 {
-    "question": {
+    "previous_answer": "挨拶または自己紹介の回答内容のテキスト",
+    "current_status": "GREETING or SELF_INTRODUCTION"
+}
+```
+
+- レスポンス
+```json
+{
+    "status": "ICE_BREAK",
+    "next_question": {
         "id": "uuid",
-        "content": "本題に入る前に、最近のお仕事や日常生活で楽しかったことや印象に残っていることはありますか？",
-        "sequence": 2
+        "content": "アイスブレイクの質問内容",
+        "sequence": 2 or 3
     },
-    "next_status": "MAIN",
     "audio_enabled": true
 }
 ```
 
 - ステータスコード
-  - 200: 取得成功
+  - 200: 送信成功
+  - 400: リクエストパラメータ不正
   - 401: 認証エラー
   - 404: セッションが存在しない
   - 409: セッションのステータスが不正（GREETINGまたはSELF_INTRODUCTION以外）
@@ -287,25 +302,78 @@
 
 > **補足**
 > - セッションのステータスが`GREETING`または`SELF_INTRODUCTION`の場合のみ呼び出し可能
-> - アイスブレイク質問は面接官の役職や面接フェーズに応じて適切に生成
-> - 次のステータスは必ず`MAIN`
+> - `include_self_introduction`の値によって呼び出し元のステータスが変化
+>   - `true`の場合：SELF_INTRODUCTIONから呼び出し
+>   - `false`の場合：GREETINGから呼び出し
+> - 回答内容は最大10000文字まで許容
+> - `sequence`は`include_self_introduction`の値に応じて変化
+>   - `true`の場合：3（挨拶→自己紹介→アイスブレイク）
+>   - `false`の場合：2（挨拶→アイスブレイク）
 > - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
 
-#### POST /api/v1/interview-sessions/{session_id}/qa
-質問への回答を送信
+#### POST /api/v1/interview-sessions/{session_id}/question
+任意の問いかけフェーズの回答を送信し、次の質問を取得。設定された質問数に達した場合は終了フェーズへ移行。
 
-- レスポンス
+- リクエストボディ
+```json
+{
+    "previous_answer": "前のフェーズでの回答内容のテキスト",
+    "current_status": "GREETING or SELF_INTRODUCTION or ICE_BREAK or MAIN"
+}
+```
+
+- レスポンス（質問が残っている場合）
 ```json
 {
     "status": "MAIN",
     "next_question": {
         "id": "uuid",
         "content": "次の質問内容",
-        "sequence": 1
+        "sequence": 2 to N
     },
-    "remaining_questions": 5
+    "audio_enabled": true,
+    "remaining_questions": 4,
+    "should_end_session": false
 }
 ```
+
+- レスポンス（最後の質問への回答を受け取った場合）
+```json
+{
+    "status": "CLOSING",
+    "next_question": null,
+    "remaining_questions": 0,
+    "should_end_session": true
+}
+```
+
+- ステータスコード
+  - 200: 送信成功
+  - 400: リクエストパラメータ不正
+  - 401: 認証エラー
+  - 404: セッションが存在しない
+  - 409: セッションのステータスが不正（GREETING、SELF_INTRODUCTION、ICE_BREAK、MAIN以外）
+  - 500: サーバーエラー
+
+> **補足**
+> - セッションのステータスが`GREETING`、`SELF_INTRODUCTION`、`ICE_BREAK`、`MAIN`のいずれかの場合に呼び出し可能
+> - `include_self_introduction`と`include_ice_break`の値によって呼び出し元のステータスが変化
+>   - 両方`false`の場合：GREETINGから呼び出し
+>   - `include_self_introduction: true`かつ`include_ice_break: false`の場合：SELF_INTRODUCTIONから呼び出し
+>   - `include_ice_break: true`の場合：ICE_BREAKから呼び出し
+>   - それ以外の場合：MAINから呼び出し
+> - 回答内容は最大10000文字まで許容
+> - `sequence`は前のフェーズに応じて変化
+>   - GREETINGからの場合：2
+>   - SELF_INTRODUCTIONからの場合：3
+>   - ICE_BREAKからの場合：3または4
+>   - MAINからの場合：4以降
+> - 質問数のカウント方法
+>   - 挨拶（1問）、自己紹介（設定に応じて1問）、アイスブレイク（設定に応じて1問）を含めて`question_count`を計算
+>   - 例：`question_count: 5`、`include_self_introduction: true`、`include_ice_break: true`の場合
+>     - 挨拶(1) + 自己紹介(1) + アイスブレイク(1) + 主質問(2)で合計5問
+> - `should_end_session`が`true`の場合は次の質問を生成せず、クライアントは直接`/end`APIを呼び出して面接練習完了画面へ遷移
+> - `audio_enabled`は音声読み上げの要否を示す（将来の拡張用）
 
 #### PUT /api/v1/interview-sessions/{session_id}/end
 面接セッションを終了
