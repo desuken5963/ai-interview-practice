@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import CompanyCard from '@/components/companies/CompanyCard';
+import CompanyFormModal from '@/components/companies/CompanyFormModal';
 
 type Company = {
   id: string;
@@ -96,9 +97,35 @@ export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>(mockCompanies);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-
-  // 企業情報登録モーダルの状態
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // 企業情報の登録処理
+  const handleSubmit = async (data: {
+    name: string;
+    business_description: string | null;
+    custom_fields: { field_name: string; content: string; }[];
+  }) => {
+    try {
+      // TODO: APIを呼び出して企業情報を登録
+      console.log('Submit data:', data);
+      
+      // モックデータの更新（実際のAPIができたら削除）
+      const newCompany: Company = {
+        id: String(Date.now()), // 一時的なID
+        name: data.name,
+        business_description: data.business_description,
+        custom_fields: data.custom_fields,
+        job_count: 0,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      
+      setCompanies(prev => [newCompany, ...prev]);
+    } catch (error) {
+      console.error('Error submitting company:', error);
+      throw error;
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -149,6 +176,13 @@ export default function CompaniesPage() {
           </nav>
         </div>
       )}
+
+      {/* 企業情報登録/編集モーダル */}
+      <CompanyFormModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleSubmit}
+      />
     </div>
   );
 } 
