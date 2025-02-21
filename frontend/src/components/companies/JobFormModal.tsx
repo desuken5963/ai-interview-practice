@@ -3,37 +3,39 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 
-type CompanyFormData = {
-  name: string;
-  business_description: string | null;
+type JobFormData = {
+  title: string;
+  description: string | null;
   custom_fields: {
     field_name: string;
     content: string;
   }[];
 };
 
-type CompanyFormModalProps = {
+type JobFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CompanyFormData) => Promise<void>;
-  initialData?: CompanyFormData;
+  onSubmit: (data: JobFormData) => Promise<void>;
+  initialData?: JobFormData;
+  companyName: string;
 };
 
-export default function CompanyFormModal({
+export default function JobFormModal({
   isOpen,
   onClose,
   onSubmit,
   initialData,
-}: CompanyFormModalProps) {
-  const [formData, setFormData] = useState<CompanyFormData>({
-    name: initialData?.name || '',
-    business_description: initialData?.business_description || '',
+  companyName,
+}: JobFormModalProps) {
+  const [formData, setFormData] = useState<JobFormData>({
+    title: initialData?.title || '',
+    description: initialData?.description || '',
     custom_fields: initialData?.custom_fields || [],
   });
 
   const [errors, setErrors] = useState<{
-    name?: string;
-    business_description?: string;
+    title?: string;
+    description?: string;
     custom_fields?: string;
     submit?: string;
     [key: `custom_fields.${number}.field_name`]: string;
@@ -49,8 +51,8 @@ export default function CompanyFormModal({
         setFormData(initialData);
       } else {
         setFormData({
-          name: '',
-          business_description: '',
+          title: '',
+          description: '',
           custom_fields: [{ field_name: '', content: '' }],
         });
       }
@@ -62,27 +64,24 @@ export default function CompanyFormModal({
   const validateForm = () => {
     const newErrors: typeof errors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = '企業名は必須です';
-    } else if (formData.name.length > 100) {
-      newErrors.name = '企業名は100文字以内で入力してください';
+    if (!formData.title.trim()) {
+      newErrors.title = '求人タイトルは必須です';
+    } else if (formData.title.length > 100) {
+      newErrors.title = '求人タイトルは100文字以内で入力してください';
     }
 
-    if (formData.business_description && formData.business_description.length > 1000) {
-      newErrors.business_description = '事業内容は1000文字以内で入力してください';
+    if (formData.description && formData.description.length > 1000) {
+      newErrors.description = '仕事内容は1000文字以内で入力してください';
     }
 
     formData.custom_fields.forEach((field, index) => {
-      if (!field.field_name.trim()) {
-        newErrors[`custom_fields.${index}.field_name`] = '項目名は必須です';
-      } else if (field.field_name.length > 50) {
-        newErrors[`custom_fields.${index}.field_name`] = '項目名は50文字以内で入力してください';
-      }
-
-      if (!field.content.trim()) {
-        newErrors[`custom_fields.${index}.content`] = '内容は必須です';
-      } else if (field.content.length > 500) {
-        newErrors[`custom_fields.${index}.content`] = '内容は500文字以内で入力してください';
+      if (field.field_name.trim() || field.content.trim()) {
+        if (field.field_name.length > 50) {
+          newErrors[`custom_fields.${index}.field_name`] = '項目名は50文字以内で入力してください';
+        }
+        if (field.content.length > 500) {
+          newErrors[`custom_fields.${index}.content`] = '内容は500文字以内で入力してください';
+        }
       }
     });
 
@@ -142,7 +141,7 @@ export default function CompanyFormModal({
         <div className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all w-full max-w-2xl">
           <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
             <h3 className="text-xl font-semibold text-gray-900">
-              {initialData ? '企業情報を編集' : '企業を登録'}
+              {companyName} - {initialData ? '求人情報を編集' : '求人を登録'}
             </h3>
             <button
               type="button"
@@ -154,43 +153,43 @@ export default function CompanyFormModal({
           </div>
 
           <form onSubmit={handleSubmit} className="p-6">
-            {/* 企業名 */}
+            {/* 求人タイトル */}
             <div className="mb-4">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                企業名 <span className="text-red-500">*</span>
+              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                求人タイトル <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                id="name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData(prev => ({ ...prev, title: e.target.value }))}
                 className={`w-full rounded-md border ${
-                  errors.name ? 'border-red-300' : 'border-gray-300'
+                  errors.title ? 'border-red-300' : 'border-gray-300'
                 } px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="企業名を入力"
+                placeholder="求人タイトルを入力"
               />
-              {errors.name && (
-                <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+              {errors.title && (
+                <p className="mt-1 text-sm text-red-600">{errors.title}</p>
               )}
             </div>
 
-            {/* 事業内容 */}
+            {/* 仕事内容 */}
             <div className="mb-4">
-              <label htmlFor="business_description" className="block text-sm font-medium text-gray-700 mb-1">
-                事業内容
+              <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                仕事内容
               </label>
               <textarea
-                id="business_description"
-                value={formData.business_description || ''}
-                onChange={(e) => setFormData(prev => ({ ...prev, business_description: e.target.value }))}
+                id="description"
+                value={formData.description || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                 rows={4}
                 className={`w-full rounded-md border ${
-                  errors.business_description ? 'border-red-300' : 'border-gray-300'
+                  errors.description ? 'border-red-300' : 'border-gray-300'
                 } px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
-                placeholder="事業内容を入力"
+                placeholder="仕事内容を入力"
               />
-              {errors.business_description && (
-                <p className="mt-1 text-sm text-red-600">{errors.business_description}</p>
+              {errors.description && (
+                <p className="mt-1 text-sm text-red-600">{errors.description}</p>
               )}
             </div>
 

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PlayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import JobListModal from './JobListModal';
+import JobFormModal from './JobFormModal';
 
 type Job = {
   id: string;
@@ -35,6 +36,8 @@ type CompanyCardProps = {
 
 export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardProps) {
   const [isJobListModalOpen, setIsJobListModalOpen] = useState(false);
+  const [isJobFormModalOpen, setIsJobFormModalOpen] = useState(false);
+  const [selectedJob, setSelectedJob] = useState<Job | undefined>();
   const [jobs, setJobs] = useState<Job[]>([]); // 実際のAPIができたら削除
 
   // 求人一覧を開く際のハンドラー
@@ -79,20 +82,61 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
 
   // 求人追加ハンドラー
   const handleAddJob = () => {
-    // TODO: 求人登録モーダルを開く
-    console.log('Add job for company:', company.id);
+    setSelectedJob(undefined);
+    setIsJobFormModalOpen(true);
+    setIsJobListModalOpen(false);
   };
 
   // 求人編集ハンドラー
   const handleEditJob = (job: Job) => {
-    // TODO: 求人編集モーダルを開く
-    console.log('Edit job:', job.id);
+    setSelectedJob(job);
+    setIsJobFormModalOpen(true);
+    setIsJobListModalOpen(false);
   };
 
   // 求人削除ハンドラー
   const handleDeleteJob = async (jobId: string) => {
-    // TODO: 求人削除APIを呼び出す
-    console.log('Delete job:', jobId);
+    try {
+      // TODO: 求人削除APIを呼び出す
+      console.log('Delete job:', jobId);
+      // 仮実装：モックデータから削除
+      setJobs(prev => prev.filter(job => job.id !== jobId));
+    } catch (error) {
+      console.error('Error deleting job:', error);
+    }
+  };
+
+  // 求人保存ハンドラー
+  const handleSubmitJob = async (data: {
+    title: string;
+    description: string | null;
+    custom_fields: { field_name: string; content: string; }[];
+  }) => {
+    try {
+      // TODO: APIを呼び出して求人情報を保存
+      console.log('Submit job data:', data);
+      
+      if (selectedJob) {
+        // 編集の場合
+        setJobs(prev => prev.map(job => 
+          job.id === selectedJob.id
+            ? { ...job, ...data, updated_at: new Date().toISOString() }
+            : job
+        ));
+      } else {
+        // 新規登録の場合
+        const newJob: Job = {
+          id: String(Date.now()), // 一時的なID
+          ...data,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setJobs(prev => [...prev, newJob]);
+      }
+    } catch (error) {
+      console.error('Error submitting job:', error);
+      throw error;
+    }
   };
 
   return (
@@ -169,6 +213,14 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
         onAddJob={handleAddJob}
         onEditJob={handleEditJob}
         onDeleteJob={handleDeleteJob}
+      />
+
+      <JobFormModal
+        isOpen={isJobFormModalOpen}
+        onClose={() => setIsJobFormModalOpen(false)}
+        onSubmit={handleSubmitJob}
+        initialData={selectedJob}
+        companyName={company.name}
       />
     </>
   );
