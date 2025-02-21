@@ -91,42 +91,6 @@ export default function CompaniesPage() {
       created_at: '2024-03-10T16:40:00Z',
       updated_at: '2024-03-10T16:40:00Z'
     },
-    {
-      id: '7',
-      name: 'スマートモビリティ株式会社',
-      business_description: '次世代モビリティサービスの開発。自動運転技術とシェアリングエコノミーを組み合わせた革新的な移動手段を提供しています。',
-      custom_fields: [
-        { field_name: '業界', content: 'モビリティ' },
-        { field_name: '従業員数', content: '180名' }
-      ],
-      job_count: 5,
-      created_at: '2024-03-09T13:25:00Z',
-      updated_at: '2024-03-09T13:25:00Z'
-    },
-    {
-      id: '8',
-      name: 'サイバーセキュリティプロ株式会社',
-      business_description: '最新のセキュリティ技術を活用したサイバー攻撃対策ソリューションを提供。企業のデジタルアセットを守ります。',
-      custom_fields: [
-        { field_name: '業界', content: 'セキュリティ' },
-        { field_name: '従業員数', content: '110名' }
-      ],
-      job_count: 4,
-      created_at: '2024-03-08T10:50:00Z',
-      updated_at: '2024-03-08T10:50:00Z'
-    },
-    {
-      id: '9',
-      name: 'クラウドインフラ株式会社',
-      business_description: 'エンタープライズ向けクラウドインフラストラクチャサービスを提供。高可用性と安全性を重視したシステム基盤を構築します。',
-      custom_fields: [
-        { field_name: '業界', content: 'クラウド・インフラ' },
-        { field_name: '従業員数', content: '250名' }
-      ],
-      job_count: 7,
-      created_at: '2024-03-07T09:15:00Z',
-      updated_at: '2024-03-07T09:15:00Z'
-    }
   ];
 
   const [companies, setCompanies] = useState<Company[]>(mockCompanies);

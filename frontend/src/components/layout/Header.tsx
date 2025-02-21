@@ -7,7 +7,6 @@ import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import Navigation from './Navigation';
 
 const navigation = [
-  { name: 'ホーム', href: '/' },
   { name: '企業/求人管理', href: '/companies' },
   { name: '面接練習履歴', href: '/history' },
   { name: '設定', href: '/settings' },
@@ -31,7 +30,7 @@ export default function Header() {
             <span className="text-xl font-bold text-blue-600">AI Interview</span>
           </Link>
 
-          {/* ナビゲーション */}
+          {/* デスクトップナビゲーション */}
           <Navigation />
 
           {/* ハンバーガーメニューボタン */}
