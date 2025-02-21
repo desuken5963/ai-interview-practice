@@ -37,7 +37,7 @@
 ### 3.1 企業情報テーブル (companies)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
+| id | INT | 主キー（自動採番） | NO |
 | name | VARCHAR(100) | 企業名 | NO |
 | business_description | TEXT | 事業内容 | YES |
 | created_at | TIMESTAMP | 作成日時 | NO |
@@ -46,8 +46,8 @@
 ### 3.2 企業追加情報テーブル (company_custom_fields)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
-| company_id | UUID | 企業ID (FK) | NO |
+| id | INT | 主キー（自動採番） | NO |
+| company_id | INT | 企業ID (FK) | NO |
 | field_name | VARCHAR(50) | 項目名 | NO |
 | content | TEXT | 内容 | NO |
 | created_at | TIMESTAMP | 作成日時 | NO |
@@ -56,8 +56,8 @@
 ### 3.3 求人情報テーブル (job_postings)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
-| company_id | UUID | 企業ID (FK) | NO |
+| id | INT | 主キー（自動採番） | NO |
+| company_id | INT | 企業ID (FK) | NO |
 | title | VARCHAR(100) | 求人タイトル | NO |
 | description | TEXT | 仕事内容 | YES |
 | created_at | TIMESTAMP | 作成日時 | NO |
@@ -66,8 +66,8 @@
 ### 3.4 求人追加情報テーブル (job_custom_fields)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
-| job_id | UUID | 求人ID (FK) | NO |
+| id | INT | 主キー（自動採番） | NO |
+| job_id | INT | 求人ID (FK) | NO |
 | field_name | VARCHAR(50) | 項目名 | NO |
 | content | TEXT | 内容 | NO |
 | created_at | TIMESTAMP | 作成日時 | NO |
@@ -111,7 +111,7 @@
 {
     "companies": [
         {
-            "id": "uuid",
+            "id": 1,
             "name": "企業名",
             "business_description": "事業内容",
             "custom_fields": [
@@ -191,7 +191,7 @@
 {
     "jobs": [
         {
-            "id": "uuid",
+            "id": 1,
             "title": "求人タイトル",
             "description": "仕事内容",
             "custom_fields": [
@@ -209,27 +209,3 @@
     "limit": 10
 }
 ```
-
-#### POST /api/v1/companies/{company_id}/jobs
-求人情報を新規登録
-- リクエストボディ
-```json
-{
-    "title": "求人タイトル",
-    "description": "仕事内容",
-    "custom_fields": [
-        {
-            "field_name": "必要なスキル",
-            "content": "スキルの内容"
-        }
-    ]
-}
-```
-
-#### PUT /api/v1/jobs/{id}
-求人情報を更新
-- リクエストボディ: POST と同様
-
-#### DELETE /api/v1/jobs/{id}
-求人情報を削除
-- レスポンス: 204 No Content

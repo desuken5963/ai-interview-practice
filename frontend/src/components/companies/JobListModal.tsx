@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { XMarkIcon, PlusIcon, PencilIcon, TrashIcon, PlayIcon } from '@heroicons/react/24/outline';
 
 type Job = {
-  id: string;
+  id: number;
   title: string;
   description: string | null;
   custom_fields: {
@@ -22,7 +22,7 @@ type JobListModalProps = {
   jobs: Job[];
   onAddJob: () => void;
   onEditJob: (job: Job) => void;
-  onDeleteJob: (jobId: string) => void;
+  onDeleteJob: (jobId: number) => void;
 };
 
 export default function JobListModal({

@@ -92,9 +92,9 @@
 ### 3.1 面接セッションテーブル (interview_sessions)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
-| company_id | UUID | 企業ID (FK) | YES |
-| job_posting_id | UUID | 求人ID (FK) | YES |
+| id | INT | 主キー（自動採番） | NO |
+| company_id | INT | 企業ID (FK) | YES |
+| job_posting_id | INT | 求人ID (FK) | YES |
 | interview_phase | TEXT | 面接フェーズ（例：一次面接、最終面接など） | YES |
 | interviewer_role | TEXT | 面接官役職（例：人事担当、現場責任者など） | YES |
 | question_count | INTEGER | 質問数（5, 10, 15のいずれか） | NO |
@@ -132,8 +132,8 @@
 ### 3.2 面接質問テーブル (interview_questions)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
-| session_id | UUID | セッションID (FK) | NO |
+| id | INT | 主キー（自動採番） | NO |
+| session_id | INT | セッションID (FK) | NO |
 | content | TEXT | 質問内容 | NO |
 | sequence | INTEGER | 質問順序（1から開始） | NO |
 | created_at | TIMESTAMP | 作成日時 | NO |
@@ -141,8 +141,8 @@
 ### 3.3 面接回答テーブル (interview_answers)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
-| question_id | UUID | 質問ID (FK) | NO |
+| id | INT | 主キー（自動採番） | NO |
+| question_id | INT | 質問ID (FK) | NO |
 | content | TEXT | 回答内容 | NO |
 | created_at | TIMESTAMP | 作成日時 | NO |
 
@@ -163,8 +163,8 @@
 - リクエストボディ
 ```json
 {
-    "company_id": "uuid（任意）",
-    "job_posting_id": "uuid（任意）",
+    "company_id": "number（任意）",
+    "job_posting_id": "number（任意）",
     "interview_phase": "string（面接フェーズ。例：一次面接、最終面接など）",
     "interviewer_role": "string（面接官役職。例：人事担当、現場責任者など）",
     "question_count": "integer（5, 10, 15のいずれか）",
@@ -219,7 +219,7 @@
 ```json
 {
     "question": {
-        "id": "uuid",
+        "id": 1,
         "content": "はじめまして。本日は面接にお時間をいただき、ありがとうございます。私は面接官の○○と申します。よろしくお願いいたします。",
         "sequence": 1
     },
@@ -260,7 +260,7 @@
 {
     "status": "SELF_INTRODUCTION",
     "next_question": {
-        "id": "uuid",
+        "id": 2,
         "content": "自己紹介の質問内容",
         "sequence": 2
     },
@@ -297,7 +297,7 @@
 {
     "status": "ICE_BREAK",
     "next_question": {
-        "id": "uuid",
+        "id": 3,
         "content": "アイスブレイクの質問内容",
         "sequence": 2 or 3
     },
@@ -340,7 +340,7 @@
 {
     "status": "MAIN",
     "next_question": {
-        "id": "uuid",
+        "id": 4,
         "content": "次の質問内容",
         "sequence": 2 to N
     },

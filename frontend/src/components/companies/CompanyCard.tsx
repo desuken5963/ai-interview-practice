@@ -7,7 +7,7 @@ import JobFormModal from './JobFormModal';
 import CompanyFormModal from './CompanyFormModal';
 
 type Job = {
-  id: string;
+  id: number;
   title: string;
   description: string | null;
   custom_fields: {
@@ -20,7 +20,7 @@ type Job = {
 
 type CompanyCardProps = {
   company: {
-    id: string;
+    id: number;
     name: string;
     business_description: string | null;
     custom_fields: {
@@ -49,7 +49,7 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
       // 仮のモックデータを使用（実際のAPIができたら削除）
       const mockJobs: Job[] = [
         {
-          id: '1',
+          id: 1,
           title: 'フロントエンドエンジニア',
           description: 'モダンなWebアプリケーション開発のためのフロントエンドエンジニアを募集しています。React、TypeScript、Next.jsなどの技術スタックを使用した開発経験がある方を歓迎します。',
           custom_fields: [
@@ -62,7 +62,7 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
           updated_at: '2024-03-15T09:00:00Z'
         },
         {
-          id: '2',
+          id: 2,
           title: 'バックエンドエンジニア',
           description: 'スケーラブルなバックエンドシステムの設計・開発を担当していただきます。マイクロサービスアーキテクチャの知識と実践経験がある方を求めています。',
           custom_fields: [
@@ -97,7 +97,7 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
   };
 
   // 求人削除ハンドラー
-  const handleDeleteJob = async (jobId: string) => {
+  const handleDeleteJob = async (jobId: number) => {
     try {
       // TODO: 求人削除APIを呼び出す
       console.log('Delete job:', jobId);
@@ -128,7 +128,7 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
       } else {
         // 新規登録の場合
         const newJob: Job = {
-          id: String(Date.now()), // 一時的なID
+          id: Date.now(), // 一時的なID
           ...data,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),

@@ -6,7 +6,7 @@ import CompanyCard from '@/components/companies/CompanyCard';
 import CompanyFormModal from '@/components/companies/CompanyFormModal';
 
 type Company = {
-  id: string;
+  id: number;
   name: string;
   business_description: string | null;
   custom_fields: {
@@ -21,7 +21,7 @@ type Company = {
 // モックデータを外部に移動
 const mockCompanies: Company[] = [
   {
-    id: '1',
+    id: 1,
     name: '株式会社テックイノベーション',
     business_description: 'AIと機械学習を活用した革新的なソリューションを提供する企業です。クラウドサービス、データ分析、自然言語処理など、最先端技術を駆使したサービスを展開しています。',
     custom_fields: [
@@ -33,7 +33,7 @@ const mockCompanies: Company[] = [
     updated_at: '2024-03-15T09:00:00Z'
   },
   {
-    id: '2',
+    id: 2,
     name: 'グローバルコンサルティング株式会社',
     business_description: '世界各国の企業に対して、経営戦略、デジタルトランスフォーメーション、組織改革などのコンサルティングサービスを提供しています。',
     custom_fields: [
@@ -45,7 +45,7 @@ const mockCompanies: Company[] = [
     updated_at: '2024-03-14T10:30:00Z'
   },
   {
-    id: '3',
+    id: 3,
     name: '未来フィンテック株式会社',
     business_description: 'ブロックチェーン技術を活用した次世代の金融サービスを開発。個人向けおよび法人向けの革新的な決済ソリューションを提供しています。',
     custom_fields: [
@@ -57,7 +57,7 @@ const mockCompanies: Company[] = [
     updated_at: '2024-03-13T15:45:00Z'
   },
   {
-    id: '4',
+    id: 4,
     name: 'エコテクノロジー株式会社',
     business_description: '再生可能エネルギーとスマートグリッド技術を組み合わせた環境配慮型のエネルギーマネジメントシステムを開発・提供しています。',
     custom_fields: [
@@ -69,7 +69,7 @@ const mockCompanies: Company[] = [
     updated_at: '2024-03-12T11:20:00Z'
   },
   {
-    id: '5',
+    id: 5,
     name: 'ヘルスケアソリューションズ株式会社',
     business_description: 'IoTとAIを活用した遠隔医療プラットフォームの開発・運営。予防医療から治療後のケアまで、包括的な医療サービスを提供しています。',
     custom_fields: [
@@ -81,7 +81,7 @@ const mockCompanies: Company[] = [
     updated_at: '2024-03-11T14:15:00Z'
   },
   {
-    id: '6',
+    id: 6,
     name: 'デジタルエデュケーション株式会社',
     business_description: 'オンライン教育プラットフォームの開発・運営。個別最適化された学習体験を提供し、生涯学習をサポートしています。',
     custom_fields: [
@@ -112,7 +112,7 @@ export default function CompaniesPage() {
       
       // モックデータの更新（実際のAPIができたら削除）
       const newCompany: Company = {
-        id: `temp-${companies.length + 1}`, // より安定したID生成方法
+        id: companies.length + 1,
         name: data.name,
         business_description: data.business_description,
         custom_fields: data.custom_fields,
@@ -129,7 +129,7 @@ export default function CompaniesPage() {
   };
 
   // 企業情報の更新処理
-  const handleUpdate = async (companyId: string, data: {
+  const handleUpdate = async (companyId: number, data: {
     name: string;
     business_description: string | null;
     custom_fields: { field_name: string; content: string; }[];
@@ -151,7 +151,7 @@ export default function CompaniesPage() {
   };
 
   // 企業情報の削除処理
-  const handleDelete = async (companyId: string) => {
+  const handleDelete = async (companyId: number) => {
     try {
       // TODO: APIを呼び出して企業情報を削除
       console.log('Delete company:', companyId);
