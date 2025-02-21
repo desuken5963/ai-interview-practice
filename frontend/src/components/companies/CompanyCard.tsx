@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { PlayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import JobListModal from './JobListModal';
 import JobFormModal from './JobFormModal';
+import CompanyFormModal from './CompanyFormModal';
 
 type Job = {
   id: string;
@@ -37,6 +38,7 @@ type CompanyCardProps = {
 export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardProps) {
   const [isJobListModalOpen, setIsJobListModalOpen] = useState(false);
   const [isJobFormModalOpen, setIsJobFormModalOpen] = useState(false);
+  const [isCompanyFormModalOpen, setIsCompanyFormModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | undefined>();
   const [jobs, setJobs] = useState<Job[]>([]); // 実際のAPIができたら削除
 
@@ -139,6 +141,29 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
     }
   };
 
+  // 企業情報編集ハンドラー
+  const handleEditCompany = () => {
+    setIsCompanyFormModalOpen(true);
+  };
+
+  // 企業情報保存ハンドラー
+  const handleSubmitCompany = async (data: {
+    name: string;
+    business_description: string | null;
+    custom_fields: { field_name: string; content: string; }[];
+  }) => {
+    try {
+      // TODO: APIを呼び出して企業情報を保存
+      console.log('Submit company data:', data);
+      if (onEdit) {
+        onEdit();
+      }
+    } catch (error) {
+      console.error('Error submitting company:', error);
+      throw error;
+    }
+  };
+
   return (
     <>
       <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
@@ -148,7 +173,7 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
             {onEdit && (
               <button
                 className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-                onClick={onEdit}
+                onClick={handleEditCompany}
               >
                 <PencilIcon className="w-5 h-5" />
               </button>
@@ -221,6 +246,17 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
         onSubmit={handleSubmitJob}
         initialData={selectedJob}
         companyName={company.name}
+      />
+
+      <CompanyFormModal
+        isOpen={isCompanyFormModalOpen}
+        onClose={() => setIsCompanyFormModalOpen(false)}
+        onSubmit={handleSubmitCompany}
+        initialData={{
+          name: company.name,
+          business_description: company.business_description,
+          custom_fields: company.custom_fields,
+        }}
       />
     </>
   );
