@@ -295,25 +295,22 @@ AI面接練習後の評価・フィードバック機能の基本設計を記載
             "job_posting_title": "求人タイトル",
             "total_rank": "A-E",
             "total_score": 85,
+            "logical_score": 90,
+            "communication_score": 85,
+            "technical_score": 88,
+            "problem_solving_score": 82,
+            "motivation_score": 95,
+            "culture_fit_score": 87,
+            "overall_comment": "面接全体の評価コメント",
             "created_at": "2024-03-20T10:00:00Z"
         }
-    ],
-    "score_trends": {
-        "total_scores": [85, 87, 90],
-        "logical_scores": [90, 92, 95],
-        "communication_scores": [85, 88, 90],
-        "technical_scores": [85, 88, 90],
-        "problem_solving_scores": [80, 82, 85],
-        "motivation_scores": [80, 82, 85],
-        "culture_fit_scores": [85, 86, 90]
-    }
+    ]
 }
 ```
 
 ## 5. AIプロンプト設計
 
-### 5.1 評価生成プロンプト
-
+### 5.1 回答評価プロンプト
 ```
 あなたは面接評価のエキスパートとして、以下の基準で面接回答を評価してください：
 
@@ -321,6 +318,8 @@ AI面接練習後の評価・フィードバック機能の基本設計を記載
 企業：{company_name}（指定がある場合）
 求人：{job_posting_details}（指定がある場合）
 面接フェーズ：{interview_phase}
+質問：{question_content}
+回答：{answer_content}
 
 # 評価項目
 1. 論理的思考力（ストーリー構成、論理展開）
@@ -330,41 +329,60 @@ AI面接練習後の評価・フィードバック機能の基本設計を記載
 5. 志望度・意欲（熱意、モチベーション）
 6. カルチャーフィット（企業文化との適合性）
 
-# 質問・回答履歴
+# 出力形式
+{
+    "logical_score": 0-100,
+    "communication_score": 0-100,
+    "technical_score": 0-100,
+    "problem_solving_score": 0-100,
+    "motivation_score": 0-100,
+    "culture_fit_score": 0-100,
+    "question_comment": "回答に対する詳細なコメント",
+    "strengths": ["良かった点の配列"],
+    "improvements": ["改善点の配列"]
+}
+```
+
+### 5.2 総評生成プロンプト
+```
+あなたは面接評価のエキスパートとして、以下の情報を基に面接全体の総評を生成してください：
+
+# 評価対象情報
+企業：{company_name}（指定がある場合）
+求人：{job_posting_details}（指定がある場合）
+面接フェーズ：{interview_phase}
+
+# 回答評価結果一覧
 [
   {
     "question": "質問内容",
-    "answer": "回答内容"
-  }
+    "scores": {
+      "logical_score": 90,
+      "communication_score": 85,
+      "technical_score": 88,
+      "problem_solving_score": 82,
+      "motivation_score": 95,
+      "culture_fit_score": 87
+    },
+    "strengths": ["..."],
+    "improvements": ["..."]
+  },
+  ...
 ]
+
+# 計算済み評価スコア
+- 論理的思考力: {logical_score}
+- コミュニケーション力: {communication_score}
+- 技術力: {technical_score}
+- 問題解決能力: {problem_solving_score}
+- 志望度・意欲: {motivation_score}
+- カルチャーフィット: {culture_fit_score}
+- 総合スコア: {total_score}
+- 総合ランク: {total_rank}
 
 # 出力形式
 {
-    "total_rank": "A-E",
-    "total_score": 0-100,
-    "overall_comment": "総評",
-    "scores": {
-        "logical_score": 0-100,
-        "communication_score": 0-100,
-        "technical_score": 0-100,
-        "problem_solving_score": 0-100,
-        "motivation_score": 0-100,
-        "culture_fit_score": 0-100
-    },
-    "answer_evaluations": [
-        {
-            "question_id": "uuid",
-            "logical_score": 0-100,
-            "communication_score": 0-100,
-            "technical_score": 0-100,
-            "problem_solving_score": 0-100,
-            "motivation_score": 0-100,
-            "culture_fit_score": 0-100,
-            "question_comment": "回答に対する詳細なコメント",
-            "strengths": ["良かった点の配列"],
-            "improvements": ["改善点の配列"]
-        }
-    ]
+    "overall_comment": "面接全体の詳細な評価コメント。候補者の強みと改善点を含めた具体的なフィードバック。"
 }
 ```
 
