@@ -1,7 +1,5 @@
-version: '3.8'
-
 services:
-  backend:
+  api:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -11,12 +9,8 @@ services:
       - "8080:8080"
     depends_on:
       - db
-    environment:
-      - DB_HOST=db
-      - DB_USER=user
-      - DB_PASSWORD=password
-      - DB_NAME=ai_interview
-      - DB_PORT=3306
+    env_file:
+      - backend/.env
     networks:
       - app-network
 
@@ -24,11 +18,8 @@ services:
     image: mysql:8.0
     platform: linux/amd64
     container_name: ai_interview_db
-    environment:
-      MYSQL_ROOT_PASSWORD: rootpassword
-      MYSQL_DATABASE: ai_interview
-      MYSQL_USER: user
-      MYSQL_PASSWORD: password
+    env_file:
+      - backend/.env
     command: >
       --character-set-server=utf8mb4
       --collation-server=utf8mb4_unicode_ci
