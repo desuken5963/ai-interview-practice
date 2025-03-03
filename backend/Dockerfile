@@ -1,10 +1,10 @@
-# GolangベースのDockerイメージ
-FROM golang:1.21-alpine
+# Debian/Ubuntuベースのイメージを使用
+FROM golang:1.21
 
 WORKDIR /api
 
-# 必要なパッケージのインストール
-RUN apk add --no-cache gcc musl-dev make mysql-client
+# MySQLクライアントをインストール
+RUN apt-get update && apt-get install -y default-mysql-client
 
 # Go 1.21と互換性のあるairのバージョンをインストール
 RUN go install github.com/cosmtrek/air@v1.49.0
