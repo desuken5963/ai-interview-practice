@@ -22,12 +22,18 @@ func main() {
 
 	// データベース接続
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
+		os.Getenv("MYSQL_USER"),
+		os.Getenv("MYSQL_PASSWORD"),
 		os.Getenv("DB_HOST"),
 		os.Getenv("DB_PORT"),
-		os.Getenv("DB_NAME"),
+		os.Getenv("MYSQL_DATABASE"),
 	)
+
+	// 環境変数が設定されていない場合はデフォルト値を使用
+	if dsn == "@tcp(:)/?charset=utf8mb4&parseTime=True&loc=Local" {
+		dsn = "user:password@tcp(db:3306)/ai_interview?charset=utf8mb4&parseTime=True&loc=Local"
+	}
+
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
@@ -39,13 +45,10 @@ func main() {
 	// ユースケースの初期化
 	companyUC := companyUseCase.NewCompanyUseCase(companyRepo)
 
-	// ハンドラーの初期化
-	companyHandler := companyHandler.NewCompanyHandler(companyUC)
-
-	// Ginルーターの初期化
+	// ルーターの初期化
 	router := gin.Default()
 
-	// CORSミドルウェアの設定
+	// CORSの設定
 	router.Use(func(c *gin.Context) {
 		c.Writer.Header().Set("Access-Control-Allow-Origin", "*")
 		c.Writer.Header().Set("Access-Control-Allow-Credentials", "true")
@@ -61,7 +64,7 @@ func main() {
 	})
 
 	// ルートの登録
-	companyHandler.RegisterRoutes(router)
+	companyHandler.RegisterRoutes(router, companyUC)
 
 	// サーバーの起動
 	port := os.Getenv("PORT")
