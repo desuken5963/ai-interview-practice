@@ -14,9 +14,17 @@ export default function CompaniesPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // クライアントサイドでのみレンダリングされるようにする
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 企業情報の取得
   useEffect(() => {
+    if (!mounted) return;
+
     const fetchCompanies = async () => {
       try {
         setLoading(true);
@@ -34,7 +42,7 @@ export default function CompaniesPage() {
     };
 
     fetchCompanies();
-  }, []);
+  }, [mounted]);
 
   // 企業情報の登録処理
   const handleSubmit = async (data: CompanyInput) => {
@@ -81,6 +89,27 @@ export default function CompaniesPage() {
     }
   };
 
+  // クライアントサイドでのみレンダリングする
+  if (!mounted) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold text-gray-900">企業/求人管理</h1>
+          <button
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+          >
+            <PlusIcon className="w-5 h-5 mr-2" />
+            企業を登録
+          </button>
+        </div>
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+          <p className="mt-2 text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-8">
@@ -116,11 +145,7 @@ export default function CompaniesPage() {
             <CompanyCard
               key={company.id}
               company={company}
-              onEdit={() => handleUpdate(company.id, {
-                name: company.name,
-                business_description: company.business_description,
-                custom_fields: company.custom_fields,
-              })}
+              onEdit={handleUpdate}
               onDelete={() => handleDelete(company.id)}
             />
           ))}

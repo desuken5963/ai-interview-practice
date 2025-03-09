@@ -2,21 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-
-type CompanyFormData = {
-  name: string;
-  business_description: string | null;
-  custom_fields: {
-    field_name: string;
-    content: string;
-  }[];
-};
+import { CompanyInput } from '@/lib/api/types';
 
 type CompanyFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CompanyFormData) => Promise<void>;
-  initialData?: CompanyFormData;
+  onSubmit: (data: CompanyInput) => Promise<void>;
+  initialData?: CompanyInput;
 };
 
 export default function CompanyFormModal({
@@ -25,7 +17,7 @@ export default function CompanyFormModal({
   onSubmit,
   initialData,
 }: CompanyFormModalProps) {
-  const [formData, setFormData] = useState<CompanyFormData>({
+  const [formData, setFormData] = useState<CompanyInput>({
     name: initialData?.name || '',
     business_description: initialData?.business_description || '',
     custom_fields: initialData?.custom_fields || [],

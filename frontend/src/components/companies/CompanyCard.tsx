@@ -6,11 +6,11 @@ import JobListModal from './JobListModal';
 import JobFormModal from './JobFormModal';
 import CompanyFormModal from './CompanyFormModal';
 import { Company, Job, CompanyInput, JobInput } from '@/lib/api/types';
-import { jobAPI } from '@/lib/api/client';
+import { jobAPI, companyAPI } from '@/lib/api/client';
 
 type CompanyCardProps = {
   company: Company;
-  onEdit?: () => void;
+  onEdit?: (companyId: number, data: CompanyInput) => void;
   onDelete?: () => void;
 };
 
@@ -22,9 +22,17 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // クライアントサイドでのみレンダリングされるようにする
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // 求人一覧を開く際のハンドラー
   const handleJobListOpen = async () => {
+    if (!mounted) return;
+    
     try {
       setLoading(true);
       // APIから求人一覧を取得
@@ -92,6 +100,8 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
 
   // 求人削除ハンドラー
   const handleDeleteJob = async (jobId: number) => {
+    if (!mounted) return;
+    
     try {
       setLoading(true);
       // 求人削除APIを呼び出す
@@ -107,6 +117,8 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
 
   // 求人保存ハンドラー
   const handleSubmitJob = async (data: JobInput) => {
+    if (!mounted) return;
+    
     try {
       setLoading(true);
       if (selectedJob) {
@@ -136,15 +148,20 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
 
   // 企業情報保存ハンドラー
   const handleSubmitCompany = async (data: CompanyInput) => {
+    if (!mounted) return;
+    
     try {
-      // TODO: APIを呼び出して企業情報を保存
-      console.log('Submit company data:', data);
+      setLoading(true);
       if (onEdit) {
-        onEdit();
+        // 親コンポーネントの更新処理を呼び出す
+        await onEdit(company.id, data);
       }
+      setIsCompanyFormModalOpen(false);
     } catch (error) {
       console.error('Error submitting company:', error);
-      throw error;
+      setError('企業情報の更新に失敗しました');
+    } finally {
+      setLoading(false);
     }
   };
 
