@@ -25,4 +25,7 @@ type JobRepository interface {
 
 	// Delete は指定されたIDの求人情報を削除します
 	Delete(ctx context.Context, id int) error
+
+	// FindCompanyWithJobs は指定された企業IDの企業情報と求人情報一覧を取得します
+	FindCompanyWithJobs(ctx context.Context, companyID int) (*entity.Company, []entity.JobPosting, error)
 }
