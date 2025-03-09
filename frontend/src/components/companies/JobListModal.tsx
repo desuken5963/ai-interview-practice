@@ -2,18 +2,7 @@
 
 import { useState } from 'react';
 import { XMarkIcon, PlusIcon, PencilIcon, TrashIcon, PlayIcon } from '@heroicons/react/24/outline';
-
-type Job = {
-  id: number;
-  title: string;
-  description: string | null;
-  custom_fields: {
-    field_name: string;
-    content: string;
-  }[];
-  created_at: string;
-  updated_at: string;
-};
+import { Job } from '@/lib/api/types';
 
 type JobListModalProps = {
   isOpen: boolean;

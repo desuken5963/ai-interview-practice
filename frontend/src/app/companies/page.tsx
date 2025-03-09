@@ -1,165 +1,83 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import CompanyCard from '@/components/companies/CompanyCard';
 import CompanyFormModal from '@/components/companies/CompanyFormModal';
-
-type Company = {
-  id: number;
-  name: string;
-  business_description: string | null;
-  custom_fields: {
-    field_name: string;
-    content: string;
-  }[];
-  job_count: number;
-  created_at: string;
-  updated_at: string;
-};
-
-// モックデータを外部に移動
-const mockCompanies: Company[] = [
-  {
-    id: 1,
-    name: '株式会社テックイノベーション',
-    business_description: 'AIと機械学習を活用した革新的なソリューションを提供する企業です。クラウドサービス、データ分析、自然言語処理など、最先端技術を駆使したサービスを展開しています。',
-    custom_fields: [
-      { field_name: '業界', content: 'IT・テクノロジー' },
-      { field_name: '従業員数', content: '150名' }
-    ],
-    job_count: 5,
-    created_at: '2024-03-15T09:00:00Z',
-    updated_at: '2024-03-15T09:00:00Z'
-  },
-  {
-    id: 2,
-    name: 'グローバルコンサルティング株式会社',
-    business_description: '世界各国の企業に対して、経営戦略、デジタルトランスフォーメーション、組織改革などのコンサルティングサービスを提供しています。',
-    custom_fields: [
-      { field_name: '業界', content: 'コンサルティング' },
-      { field_name: '従業員数', content: '300名' }
-    ],
-    job_count: 3,
-    created_at: '2024-03-14T10:30:00Z',
-    updated_at: '2024-03-14T10:30:00Z'
-  },
-  {
-    id: 3,
-    name: '未来フィンテック株式会社',
-    business_description: 'ブロックチェーン技術を活用した次世代の金融サービスを開発。個人向けおよび法人向けの革新的な決済ソリューションを提供しています。',
-    custom_fields: [
-      { field_name: '業界', content: 'フィンテック' },
-      { field_name: '従業員数', content: '80名' }
-    ],
-    job_count: 2,
-    created_at: '2024-03-13T15:45:00Z',
-    updated_at: '2024-03-13T15:45:00Z'
-  },
-  {
-    id: 4,
-    name: 'エコテクノロジー株式会社',
-    business_description: '再生可能エネルギーとスマートグリッド技術を組み合わせた環境配慮型のエネルギーマネジメントシステムを開発・提供しています。',
-    custom_fields: [
-      { field_name: '業界', content: 'エネルギー・環境' },
-      { field_name: '従業員数', content: '120名' }
-    ],
-    job_count: 4,
-    created_at: '2024-03-12T11:20:00Z',
-    updated_at: '2024-03-12T11:20:00Z'
-  },
-  {
-    id: 5,
-    name: 'ヘルスケアソリューションズ株式会社',
-    business_description: 'IoTとAIを活用した遠隔医療プラットフォームの開発・運営。予防医療から治療後のケアまで、包括的な医療サービスを提供しています。',
-    custom_fields: [
-      { field_name: '業界', content: 'ヘルスケア' },
-      { field_name: '従業員数', content: '200名' }
-    ],
-    job_count: 6,
-    created_at: '2024-03-11T14:15:00Z',
-    updated_at: '2024-03-11T14:15:00Z'
-  },
-  {
-    id: 6,
-    name: 'デジタルエデュケーション株式会社',
-    business_description: 'オンライン教育プラットフォームの開発・運営。個別最適化された学習体験を提供し、生涯学習をサポートしています。',
-    custom_fields: [
-      { field_name: '業界', content: 'エドテック' },
-      { field_name: '従業員数', content: '90名' }
-    ],
-    job_count: 3,
-    created_at: '2024-03-10T16:40:00Z',
-    updated_at: '2024-03-10T16:40:00Z'
-  },
-];
+import { companyAPI } from '@/lib/api/client';
+import { Company, CompanyInput, CompanyListResponse } from '@/lib/api/types';
 
 export default function CompaniesPage() {
-  const [companies, setCompanies] = useState<Company[]>(mockCompanies);
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
+  // 企業情報の取得
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      try {
+        setLoading(true);
+        const response = await companyAPI.getCompanies();
+        setCompanies(response.companies);
+        // ページネーションの設定
+        setTotalPages(Math.ceil(response.total / response.limit));
+        setCurrentPage(response.page);
+      } catch (err) {
+        console.error('Failed to fetch companies:', err);
+        setError('企業情報の取得に失敗しました。');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompanies();
+  }, []);
+
   // 企業情報の登録処理
-  const handleSubmit = async (data: {
-    name: string;
-    business_description: string | null;
-    custom_fields: { field_name: string; content: string; }[];
-  }) => {
+  const handleSubmit = async (data: CompanyInput) => {
     try {
-      // TODO: APIを呼び出して企業情報を登録
-      console.log('Submit data:', data);
-      
-      // モックデータの更新（実際のAPIができたら削除）
-      const newCompany: Company = {
-        id: companies.length + 1,
-        name: data.name,
-        business_description: data.business_description,
-        custom_fields: data.custom_fields,
-        job_count: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      
+      setLoading(true);
+      const newCompany = await companyAPI.createCompany(data);
       setCompanies(prev => [newCompany, ...prev]);
+      setIsModalOpen(false);
     } catch (error) {
       console.error('Error submitting company:', error);
-      throw error;
+      setError('企業情報の登録に失敗しました。');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 企業情報の更新処理
-  const handleUpdate = async (companyId: number, data: {
-    name: string;
-    business_description: string | null;
-    custom_fields: { field_name: string; content: string; }[];
-  }) => {
+  const handleUpdate = async (companyId: number, data: CompanyInput) => {
     try {
-      // TODO: APIを呼び出して企業情報を更新
-      console.log('Update data:', { companyId, data });
-      
-      // モックデータの更新（実際のAPIができたら削除）
+      setLoading(true);
+      const updatedCompany = await companyAPI.updateCompany(companyId, data);
       setCompanies(prev => prev.map(company => 
-        company.id === companyId
-          ? { ...company, ...data, updated_at: new Date().toISOString() }
-          : company
+        company.id === companyId ? updatedCompany : company
       ));
     } catch (error) {
       console.error('Error updating company:', error);
-      throw error;
+      setError('企業情報の更新に失敗しました。');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 企業情報の削除処理
   const handleDelete = async (companyId: number) => {
     try {
-      // TODO: APIを呼び出して企業情報を削除
-      console.log('Delete company:', companyId);
-      
-      // モックデータの更新（実際のAPIができたら削除）
+      setLoading(true);
+      await companyAPI.deleteCompany(companyId);
       setCompanies(prev => prev.filter(company => company.id !== companyId));
     } catch (error) {
       console.error('Error deleting company:', error);
+      setError('企業情報の削除に失敗しました。');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -176,22 +94,40 @@ export default function CompaniesPage() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {companies.map((company) => (
-          <CompanyCard
-            key={company.id}
-            company={company}
-            onEdit={() => handleUpdate(company.id, {
-              name: company.name,
-              business_description: company.business_description,
-              custom_fields: company.custom_fields,
-            })}
-            onDelete={() => handleDelete(company.id)}
-          />
-        ))}
-      </div>
+      {/* エラーメッセージ */}
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          {error}
+        </div>
+      )}
 
-      {companies.length === 0 && (
+      {/* ローディング表示 */}
+      {loading && (
+        <div className="text-center py-12">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+          <p className="mt-2 text-gray-600">読み込み中...</p>
+        </div>
+      )}
+
+      {/* 企業一覧 */}
+      {!loading && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {companies.map((company) => (
+            <CompanyCard
+              key={company.id}
+              company={company}
+              onEdit={() => handleUpdate(company.id, {
+                name: company.name,
+                business_description: company.business_description,
+                custom_fields: company.custom_fields,
+              })}
+              onDelete={() => handleDelete(company.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {!loading && companies.length === 0 && (
         <div className="text-center py-12">
           <p className="text-gray-500">登録されている企業はありません</p>
         </div>

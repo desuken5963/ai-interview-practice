@@ -2,21 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-
-type JobFormData = {
-  title: string;
-  description: string | null;
-  custom_fields: {
-    field_name: string;
-    content: string;
-  }[];
-};
+import { Job, JobInput } from '@/lib/api/types';
 
 type JobFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: JobFormData) => Promise<void>;
-  initialData?: JobFormData;
+  onSubmit: (data: JobInput) => Promise<void>;
+  initialData?: Job;
   companyName: string;
 };
 
@@ -27,15 +19,17 @@ export default function JobFormModal({
   initialData,
   companyName,
 }: JobFormModalProps) {
-  const [formData, setFormData] = useState<JobFormData>({
+  const [formData, setFormData] = useState<JobInput>({
     title: initialData?.title || '',
     description: initialData?.description || '',
+    requirements: initialData?.requirements || '',
     custom_fields: initialData?.custom_fields || [],
   });
 
   const [errors, setErrors] = useState<{
     title?: string;
     description?: string;
+    requirements?: string;
     custom_fields?: string;
     submit?: string;
     [key: `custom_fields.${number}.field_name`]: string;
@@ -48,11 +42,17 @@ export default function JobFormModal({
   useEffect(() => {
     if (isOpen) {
       if (initialData) {
-        setFormData(initialData);
+        setFormData({
+          title: initialData.title,
+          description: initialData.description,
+          requirements: initialData.requirements,
+          custom_fields: initialData.custom_fields,
+        });
       } else {
         setFormData({
           title: '',
           description: '',
+          requirements: '',
           custom_fields: [{ field_name: '', content: '' }],
         });
       }
@@ -72,6 +72,10 @@ export default function JobFormModal({
 
     if (formData.description && formData.description.length > 1000) {
       newErrors.description = '仕事内容は1000文字以内で入力してください';
+    }
+
+    if (formData.requirements && formData.requirements.length > 1000) {
+      newErrors.requirements = '応募要件は1000文字以内で入力してください';
     }
 
     formData.custom_fields.forEach((field, index) => {
@@ -190,6 +194,26 @@ export default function JobFormModal({
               />
               {errors.description && (
                 <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+              )}
+            </div>
+
+            {/* 応募要件 */}
+            <div className="mb-4">
+              <label htmlFor="requirements" className="block text-sm font-medium text-gray-700 mb-1">
+                応募要件
+              </label>
+              <textarea
+                id="requirements"
+                value={formData.requirements || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, requirements: e.target.value }))}
+                rows={4}
+                className={`w-full rounded-md border ${
+                  errors.requirements ? 'border-red-300' : 'border-gray-300'
+                } px-3 py-2 text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                placeholder="応募要件を入力"
+              />
+              {errors.requirements && (
+                <p className="mt-1 text-sm text-red-600">{errors.requirements}</p>
               )}
             </div>
 

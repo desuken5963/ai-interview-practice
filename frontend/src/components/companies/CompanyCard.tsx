@@ -1,36 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PlayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import JobListModal from './JobListModal';
 import JobFormModal from './JobFormModal';
 import CompanyFormModal from './CompanyFormModal';
-
-type Job = {
-  id: number;
-  title: string;
-  description: string | null;
-  custom_fields: {
-    field_name: string;
-    content: string;
-  }[];
-  created_at: string;
-  updated_at: string;
-};
+import { Company, Job, CompanyInput, JobInput } from '@/lib/api/types';
+import { jobAPI } from '@/lib/api/client';
 
 type CompanyCardProps = {
-  company: {
-    id: number;
-    name: string;
-    business_description: string | null;
-    custom_fields: {
-      field_name: string;
-      content: string;
-    }[];
-    job_count: number;
-    created_at: string;
-    updated_at: string;
-  };
+  company: Company;
   onEdit?: () => void;
   onDelete?: () => void;
 };
@@ -40,18 +19,28 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
   const [isJobFormModalOpen, setIsJobFormModalOpen] = useState(false);
   const [isCompanyFormModalOpen, setIsCompanyFormModalOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<Job | undefined>();
-  const [jobs, setJobs] = useState<Job[]>([]); // 実際のAPIができたら削除
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // 求人一覧を開く際のハンドラー
   const handleJobListOpen = async () => {
     try {
-      // TODO: APIから求人一覧を取得
+      setLoading(true);
+      // APIから求人一覧を取得
+      const data = await jobAPI.getJobs(company.id);
+      setJobs(data);
+      setIsJobListModalOpen(true);
+      
+      /* 
       // 仮のモックデータを使用（実際のAPIができたら削除）
       const mockJobs: Job[] = [
         {
           id: 1,
+          company_id: company.id,
           title: 'フロントエンドエンジニア',
           description: 'モダンなWebアプリケーション開発のためのフロントエンドエンジニアを募集しています。React、TypeScript、Next.jsなどの技術スタックを使用した開発経験がある方を歓迎します。',
+          requirements: null,
           custom_fields: [
             { field_name: '雇用形態', content: '正社員' },
             { field_name: '給与', content: '年収450万円〜800万円' },
@@ -63,8 +52,10 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
         },
         {
           id: 2,
+          company_id: company.id,
           title: 'バックエンドエンジニア',
           description: 'スケーラブルなバックエンドシステムの設計・開発を担当していただきます。マイクロサービスアーキテクチャの知識と実践経験がある方を求めています。',
+          requirements: null,
           custom_fields: [
             { field_name: '雇用形態', content: '正社員' },
             { field_name: '給与', content: '年収500万円〜900万円' },
@@ -76,9 +67,12 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
         }
       ];
       setJobs(mockJobs);
-      setIsJobListModalOpen(true);
+      */
     } catch (error) {
       console.error('Error fetching jobs:', error);
+      setError('求人情報の取得に失敗しました');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,45 +93,39 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
   // 求人削除ハンドラー
   const handleDeleteJob = async (jobId: number) => {
     try {
-      // TODO: 求人削除APIを呼び出す
-      console.log('Delete job:', jobId);
-      // 仮実装：モックデータから削除
+      setLoading(true);
+      // 求人削除APIを呼び出す
+      await jobAPI.deleteJob(jobId);
       setJobs(prev => prev.filter(job => job.id !== jobId));
     } catch (error) {
       console.error('Error deleting job:', error);
+      setError('求人の削除に失敗しました');
+    } finally {
+      setLoading(false);
     }
   };
 
   // 求人保存ハンドラー
-  const handleSubmitJob = async (data: {
-    title: string;
-    description: string | null;
-    custom_fields: { field_name: string; content: string; }[];
-  }) => {
+  const handleSubmitJob = async (data: JobInput) => {
     try {
-      // TODO: APIを呼び出して求人情報を保存
-      console.log('Submit job data:', data);
-      
+      setLoading(true);
       if (selectedJob) {
         // 編集の場合
+        const updatedJob = await jobAPI.updateJob(selectedJob.id, data);
         setJobs(prev => prev.map(job => 
-          job.id === selectedJob.id
-            ? { ...job, ...data, updated_at: new Date().toISOString() }
-            : job
+          job.id === selectedJob.id ? updatedJob : job
         ));
       } else {
         // 新規登録の場合
-        const newJob: Job = {
-          id: Date.now(), // 一時的なID
-          ...data,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        };
+        const newJob = await jobAPI.createJob(company.id, data);
         setJobs(prev => [...prev, newJob]);
       }
+      setIsJobFormModalOpen(false);
     } catch (error) {
       console.error('Error submitting job:', error);
-      throw error;
+      setError('求人情報の保存に失敗しました');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -147,11 +135,7 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
   };
 
   // 企業情報保存ハンドラー
-  const handleSubmitCompany = async (data: {
-    name: string;
-    business_description: string | null;
-    custom_fields: { field_name: string; content: string; }[];
-  }) => {
+  const handleSubmitCompany = async (data: CompanyInput) => {
     try {
       // TODO: APIを呼び出して企業情報を保存
       console.log('Submit company data:', data);
@@ -218,7 +202,7 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
             onClick={handleJobListOpen}
           >
             <span>求人一覧</span>
-            <span className="font-semibold">({company.job_count})</span>
+            <span className="font-semibold">({company.job_count || 0})</span>
           </button>
           <button
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
