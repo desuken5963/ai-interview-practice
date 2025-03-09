@@ -1,11 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
-import CompanyCard from '@/components/companies/CompanyCard';
-import CompanyFormModal from '@/components/companies/CompanyFormModal';
+import dynamic from 'next/dynamic';
 import { companyAPI } from '@/lib/api/client';
-import { Company, CompanyInput, CompanyListResponse } from '@/lib/api/types';
+import { Company, CompanyInput } from '@/lib/api/types';
+
+// クライアントサイドのみでレンダリングするためにdynamic importを使用
+const CompanyCard = dynamic(() => import('@/components/companies/CompanyCard'), {
+  ssr: false,
+});
+
+const CompanyFormModal = dynamic(() => import('@/components/companies/CompanyFormModal'), {
+  ssr: false,
+});
 
 export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -22,27 +30,30 @@ export default function CompaniesPage() {
   }, []);
 
   // 企業情報の取得
-  useEffect(() => {
+  const fetchCompanies = useCallback(async () => {
     if (!mounted) return;
 
-    const fetchCompanies = async () => {
-      try {
-        setLoading(true);
-        const response = await companyAPI.getCompanies();
-        setCompanies(response.companies);
-        // ページネーションの設定
-        setTotalPages(Math.ceil(response.total / response.limit));
-        setCurrentPage(response.page);
-      } catch (err) {
-        console.error('Failed to fetch companies:', err);
-        setError('企業情報の取得に失敗しました。');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCompanies();
+    try {
+      setLoading(true);
+      const response = await companyAPI.getCompanies();
+      setCompanies(response.companies);
+      // ページネーションの設定
+      setTotalPages(Math.ceil(response.total / response.limit));
+      setCurrentPage(response.page);
+    } catch (err) {
+      console.error('Failed to fetch companies:', err);
+      setError('企業情報の取得に失敗しました。');
+    } finally {
+      setLoading(false);
+    }
   }, [mounted]);
+
+  // マウント時に企業情報を取得
+  useEffect(() => {
+    if (mounted) {
+      fetchCompanies();
+    }
+  }, [mounted, fetchCompanies]);
 
   // 企業情報の登録処理
   const handleSubmit = async (data: CompanyInput) => {
@@ -89,6 +100,22 @@ export default function CompaniesPage() {
     }
   };
 
+  // 特定の企業情報を更新
+  const handleRefreshCompany = async (companyId: number) => {
+    try {
+      setLoading(true);
+      const updatedCompany = await companyAPI.getCompany(companyId);
+      setCompanies(prev => prev.map(company => 
+        company.id === companyId ? updatedCompany : company
+      ));
+    } catch (error) {
+      console.error('Error refreshing company:', error);
+      setError('企業情報の更新に失敗しました。');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // クライアントサイドでのみレンダリングする
   if (!mounted) {
     return (
@@ -127,6 +154,12 @@ export default function CompaniesPage() {
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
+          <button 
+            className="float-right font-bold"
+            onClick={() => setError(null)}
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -147,6 +180,7 @@ export default function CompaniesPage() {
               company={company}
               onEdit={handleUpdate}
               onDelete={() => handleDelete(company.id)}
+              onRefresh={handleRefreshCompany}
             />
           ))}
         </div>

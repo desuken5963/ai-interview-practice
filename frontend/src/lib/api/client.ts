@@ -1,5 +1,5 @@
 // APIクライアントの基本設定
-import { Company, CompanyInput, CompanyListResponse, Job, JobInput } from './types';
+import { Company, CompanyInput, CompanyListResponse, Job, JobInput, JobResponse } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -27,7 +27,17 @@ async function fetchAPI<T>(
     throw new Error(error.message || `API error: ${response.status}`);
   }
 
-  return response.json();
+  // 204 No Content または Content-Length が 0 の場合は空のオブジェクトを返す
+  if (response.status === 204 || response.headers.get('Content-Length') === '0') {
+    return {} as T;
+  }
+
+  try {
+    return await response.json();
+  } catch (error) {
+    console.warn('Failed to parse JSON response:', error);
+    return {} as T;
+  }
 }
 
 // 企業情報のAPI関数
@@ -54,14 +64,19 @@ export const companyAPI = {
   deleteCompany: (id: number) => fetchAPI<void>(`/api/v1/companies/${id}`, {
     method: 'DELETE',
   }),
+
+  // 企業と紐づく求人一覧を一括取得
+  getCompanyWithJobs: (id: number) => fetchAPI<Company>(`/api/v1/companies/${id}/with-jobs`),
 };
 
 // 求人情報のAPI関数
 export const jobAPI = {
-  // 求人一覧を取得
+  // 求人一覧を取得（企業IDが指定されている場合は企業に紐づく求人一覧を取得）
   getJobs: (companyId?: number) => {
-    const endpoint = companyId ? `/api/v1/companies/${companyId}/jobs` : '/api/v1/jobs';
-    return fetchAPI<Job[]>(endpoint);
+    const endpoint = companyId 
+      ? `/api/v1/companies/${companyId}/jobs` 
+      : '/api/v1/jobs';
+    return fetchAPI<JobResponse>(endpoint);
   },
   
   // 求人詳細を取得
@@ -74,13 +89,13 @@ export const jobAPI = {
   }),
   
   // 求人を更新
-  updateJob: (id: number, data: JobInput) => fetchAPI<Job>(`/api/v1/jobs/${id}`, {
+  updateJob: (companyId: number, jobId: number, data: JobInput) => fetchAPI<Job>(`/api/v1/companies/${companyId}/jobs/${jobId}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
   
   // 求人を削除
-  deleteJob: (id: number) => fetchAPI<void>(`/api/v1/jobs/${id}`, {
+  deleteJob: (companyId: number, jobId: number) => fetchAPI<void>(`/api/v1/companies/${companyId}/jobs/${jobId}`, {
     method: 'DELETE',
   }),
 }; 

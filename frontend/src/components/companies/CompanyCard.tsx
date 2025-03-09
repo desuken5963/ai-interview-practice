@@ -2,19 +2,31 @@
 
 import { useState, useEffect } from 'react';
 import { PlayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import JobListModal from './JobListModal';
-import JobFormModal from './JobFormModal';
-import CompanyFormModal from './CompanyFormModal';
+import dynamic from 'next/dynamic';
 import { Company, Job, CompanyInput, JobInput } from '@/lib/api/types';
-import { jobAPI, companyAPI } from '@/lib/api/client';
+import { jobAPI } from '@/lib/api/client';
+
+// クライアントサイドのみでレンダリングするためにdynamic importを使用
+const JobListModal = dynamic(() => import('./JobListModal'), {
+  ssr: false,
+});
+
+const JobFormModal = dynamic(() => import('./JobFormModal'), {
+  ssr: false,
+});
+
+const CompanyFormModal = dynamic(() => import('./CompanyFormModal'), {
+  ssr: false,
+});
 
 type CompanyCardProps = {
   company: Company;
   onEdit?: (companyId: number, data: CompanyInput) => void;
   onDelete?: () => void;
+  onRefresh?: (companyId: number) => Promise<void>;
 };
 
-export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardProps) {
+export default function CompanyCard({ company, onEdit, onDelete, onRefresh }: CompanyCardProps) {
   const [isJobListModalOpen, setIsJobListModalOpen] = useState(false);
   const [isJobFormModalOpen, setIsJobFormModalOpen] = useState(false);
   const [isCompanyFormModalOpen, setIsCompanyFormModalOpen] = useState(false);
@@ -29,53 +41,31 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
     setMounted(true);
   }, []);
 
+  // 求人データを取得する関数
+  const fetchJobs = async () => {
+    if (!mounted) return;
+    
+    try {
+      setLoading(true);
+      // APIから求人一覧を取得
+      const response = await jobAPI.getJobs(company.id);
+      setJobs(response.jobs);
+    } catch (error) {
+      console.error('Error fetching jobs:', error);
+      setError('求人情報の取得に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // 求人一覧を開く際のハンドラー
   const handleJobListOpen = async () => {
     if (!mounted) return;
     
     try {
       setLoading(true);
-      // APIから求人一覧を取得
-      const data = await jobAPI.getJobs(company.id);
-      setJobs(data);
+      await fetchJobs();
       setIsJobListModalOpen(true);
-      
-      /* 
-      // 仮のモックデータを使用（実際のAPIができたら削除）
-      const mockJobs: Job[] = [
-        {
-          id: 1,
-          company_id: company.id,
-          title: 'フロントエンドエンジニア',
-          description: 'モダンなWebアプリケーション開発のためのフロントエンドエンジニアを募集しています。React、TypeScript、Next.jsなどの技術スタックを使用した開発経験がある方を歓迎します。',
-          requirements: null,
-          custom_fields: [
-            { field_name: '雇用形態', content: '正社員' },
-            { field_name: '給与', content: '年収450万円〜800万円' },
-            { field_name: '勤務地', content: '東京都渋谷区' },
-            { field_name: '必要なスキル', content: 'React, TypeScript, Next.js' }
-          ],
-          created_at: '2024-03-15T09:00:00Z',
-          updated_at: '2024-03-15T09:00:00Z'
-        },
-        {
-          id: 2,
-          company_id: company.id,
-          title: 'バックエンドエンジニア',
-          description: 'スケーラブルなバックエンドシステムの設計・開発を担当していただきます。マイクロサービスアーキテクチャの知識と実践経験がある方を求めています。',
-          requirements: null,
-          custom_fields: [
-            { field_name: '雇用形態', content: '正社員' },
-            { field_name: '給与', content: '年収500万円〜900万円' },
-            { field_name: '勤務地', content: '東京都港区' },
-            { field_name: '必要なスキル', content: 'Go, gRPC, Kubernetes' }
-          ],
-          created_at: '2024-03-14T10:30:00Z',
-          updated_at: '2024-03-14T10:30:00Z'
-        }
-      ];
-      setJobs(mockJobs);
-      */
     } catch (error) {
       console.error('Error fetching jobs:', error);
       setError('求人情報の取得に失敗しました');
@@ -105,8 +95,15 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
     try {
       setLoading(true);
       // 求人削除APIを呼び出す
-      await jobAPI.deleteJob(jobId);
-      setJobs(prev => prev.filter(job => job.id !== jobId));
+      await jobAPI.deleteJob(company.id, jobId);
+      
+      // 最新の求人データを取得
+      await fetchJobs();
+      
+      // 企業情報も更新（求人数などが変わるため）
+      if (onRefresh) {
+        await onRefresh(company.id);
+      }
     } catch (error) {
       console.error('Error deleting job:', error);
       setError('求人の削除に失敗しました');
@@ -123,16 +120,22 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
       setLoading(true);
       if (selectedJob) {
         // 編集の場合
-        const updatedJob = await jobAPI.updateJob(selectedJob.id, data);
-        setJobs(prev => prev.map(job => 
-          job.id === selectedJob.id ? updatedJob : job
-        ));
+        await jobAPI.updateJob(company.id, selectedJob.id, data);
       } else {
         // 新規登録の場合
-        const newJob = await jobAPI.createJob(company.id, data);
-        setJobs(prev => [...prev, newJob]);
+        await jobAPI.createJob(company.id, data);
       }
+      
+      // モーダルを閉じる
       setIsJobFormModalOpen(false);
+      
+      // 最新の求人データを取得
+      await fetchJobs();
+      
+      // 企業情報も更新（求人数などが変わるため）
+      if (onRefresh) {
+        await onRefresh(company.id);
+      }
     } catch (error) {
       console.error('Error submitting job:', error);
       setError('求人情報の保存に失敗しました');
@@ -168,6 +171,19 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
   return (
     <>
       <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+        {/* エラーメッセージ */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            {error}
+            <button 
+              className="float-right font-bold"
+              onClick={() => setError(null)}
+            >
+              ×
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-xl font-semibold text-gray-900">{company.name}</h2>
           <div className="flex gap-2">
@@ -217,9 +233,16 @@ export default function CompanyCard({ company, onEdit, onDelete }: CompanyCardPr
           <button
             className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 transition-colors gap-1"
             onClick={handleJobListOpen}
+            disabled={loading}
           >
-            <span>求人一覧</span>
-            <span className="font-semibold">({company.job_count || 0})</span>
+            {loading ? (
+              <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mr-2"></span>
+            ) : (
+              <>
+                <span>求人一覧</span>
+                <span className="font-semibold">({company.job_count || 0})</span>
+              </>
+            )}
           </button>
           <button
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"

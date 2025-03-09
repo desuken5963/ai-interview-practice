@@ -42,6 +42,14 @@ export type Job = {
   updated_at: string;
 };
 
+// 求人一覧のレスポンス型
+export type JobResponse = {
+  jobs: Job[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
 // 求人作成・更新用のデータ型
 export type JobInput = {
   title: string;

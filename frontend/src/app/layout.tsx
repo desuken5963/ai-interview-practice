@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "AI面接練習アプリ",
-  description: "AIを活用した面接練習プラットフォーム",
+  description: "企業情報に基づいた面接練習ができるアプリケーション",
 };
 
 export default function RootLayout({
@@ -17,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja">
-      <body className={`${inter.className} bg-gray-50 min-h-screen flex flex-col`}>
+    <html lang="ja" suppressHydrationWarning>
+      <body className={`${inter.className} bg-gray-50 min-h-screen flex flex-col`} suppressHydrationWarning>
         <Header />
         <main className="flex-grow pt-16">
           {children}
