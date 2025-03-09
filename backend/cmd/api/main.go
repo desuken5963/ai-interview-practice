@@ -8,8 +8,11 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	companyHandler "github.com/takanoakira/ai-interview-practice/backend/internal/handler/company"
+	jobHandler "github.com/takanoakira/ai-interview-practice/backend/internal/handler/job"
 	companyRepository "github.com/takanoakira/ai-interview-practice/backend/internal/repository/company"
+	jobRepository "github.com/takanoakira/ai-interview-practice/backend/internal/repository/job"
 	companyUseCase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/company"
+	jobUseCase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -41,9 +44,11 @@ func main() {
 
 	// リポジトリの初期化
 	companyRepo := companyRepository.NewCompanyRepository(db)
+	jobRepo := jobRepository.NewJobRepository(db)
 
 	// ユースケースの初期化
 	companyUC := companyUseCase.NewCompanyUseCase(companyRepo)
+	jobUC := jobUseCase.NewJobUseCase(jobRepo, companyRepo)
 
 	// ルーターの初期化
 	router := gin.Default()
@@ -65,6 +70,7 @@ func main() {
 
 	// ルートの登録
 	companyHandler.RegisterRoutes(router, companyUC)
+	jobHandler.RegisterRoutes(router, jobUC)
 
 	// サーバーの起動
 	port := os.Getenv("PORT")
