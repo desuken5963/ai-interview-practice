@@ -4,10 +4,21 @@ import (
 	"context"
 
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
+	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	"gorm.io/gorm"
 )
 
+type deleteCompanyRepository struct {
+	db *gorm.DB
+}
+
+// NewDeleteCompanyRepository は新しいDeleteCompanyRepositoryインスタンスを作成します
+func NewDeleteCompanyRepository(db *gorm.DB) repository.DeleteCompanyRepository {
+	return &deleteCompanyRepository{db: db}
+}
+
 // Delete は指定されたIDの企業情報を削除します
-func (r *companyRepository) Delete(ctx context.Context, id int) error {
+func (r *deleteCompanyRepository) Delete(ctx context.Context, id int) error {
 	// トランザクションを開始
 	tx := r.db.Begin()
 	if tx.Error != nil {
@@ -47,4 +58,10 @@ func (r *companyRepository) Delete(ctx context.Context, id int) error {
 
 	// トランザクションをコミット
 	return tx.Commit().Error
+}
+
+// 後方互換性のための実装
+func (r *companyRepository) Delete(ctx context.Context, id int) error {
+	repo := NewDeleteCompanyRepository(r.db)
+	return repo.Delete(ctx, id)
 }
