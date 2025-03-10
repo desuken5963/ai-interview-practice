@@ -4,10 +4,21 @@ import (
 	"context"
 
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
+	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	"gorm.io/gorm"
 )
 
+type createCompanyRepository struct {
+	db *gorm.DB
+}
+
+// NewCreateCompanyRepository は新しいCreateCompanyRepositoryインスタンスを作成します
+func NewCreateCompanyRepository(db *gorm.DB) repository.CreateCompanyRepository {
+	return &createCompanyRepository{db: db}
+}
+
 // Create は新しい企業情報を作成します
-func (r *companyRepository) Create(ctx context.Context, company *entity.Company) error {
+func (r *createCompanyRepository) Create(ctx context.Context, company *entity.Company) error {
 	// トランザクションを開始
 	tx := r.db.Begin()
 	if tx.Error != nil {
@@ -41,4 +52,10 @@ func (r *companyRepository) Create(ctx context.Context, company *entity.Company)
 
 	// トランザクションをコミット
 	return tx.Commit().Error
+}
+
+// 後方互換性のための実装
+func (r *companyRepository) Create(ctx context.Context, company *entity.Company) error {
+	repo := NewCreateCompanyRepository(r.db)
+	return repo.Create(ctx, company)
 }
