@@ -4,10 +4,21 @@ import (
 	"context"
 
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
+	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	"gorm.io/gorm"
 )
 
+type getCompaniesRepository struct {
+	db *gorm.DB
+}
+
+// NewGetCompaniesRepository は新しいGetCompaniesRepositoryインスタンスを作成します
+func NewGetCompaniesRepository(db *gorm.DB) repository.GetCompaniesRepository {
+	return &getCompaniesRepository{db: db}
+}
+
 // FindAll は企業情報の一覧を取得します
-func (r *companyRepository) FindAll(ctx context.Context, page, limit int) ([]entity.Company, int64, error) {
+func (r *getCompaniesRepository) FindAll(ctx context.Context, page, limit int) ([]entity.Company, int64, error) {
 	var companies []entity.Company
 	var total int64
 
@@ -39,4 +50,10 @@ func (r *companyRepository) FindAll(ctx context.Context, page, limit int) ([]ent
 	}
 
 	return companies, total, nil
+}
+
+// 後方互換性のための実装
+func (r *companyRepository) FindAll(ctx context.Context, page, limit int) ([]entity.Company, int64, error) {
+	repo := NewGetCompaniesRepository(r.db)
+	return repo.FindAll(ctx, page, limit)
 }

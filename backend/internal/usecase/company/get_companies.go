@@ -7,8 +7,22 @@ import (
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
 )
 
-// GetCompanies は企業情報の一覧を取得します
-func (u *companyUseCase) GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error) {
+// GetCompaniesUsecase は企業情報の一覧を取得するためのインターフェースです
+type GetCompaniesUsecase interface {
+	Execute(ctx context.Context, page, limit int) (*entity.CompanyResponse, error)
+}
+
+type getCompaniesUsecase struct {
+	repo repository.GetCompaniesRepository
+}
+
+// NewGetCompaniesUsecase は新しいGetCompaniesUsecaseインスタンスを作成します
+func NewGetCompaniesUsecase(repo repository.GetCompaniesRepository) GetCompaniesUsecase {
+	return &getCompaniesUsecase{repo: repo}
+}
+
+// Execute は企業情報の一覧を取得します
+func (u *getCompaniesUsecase) Execute(ctx context.Context, page, limit int) (*entity.CompanyResponse, error) {
 	// ページとリミットのデフォルト値を設定
 	if page <= 0 {
 		page = 1
@@ -18,7 +32,7 @@ func (u *companyUseCase) GetCompanies(ctx context.Context, page, limit int) (*en
 	}
 
 	// リポジトリから企業情報を取得
-	companies, total, err := u.companyRepo.FindAll(ctx, page, limit)
+	companies, total, err := u.repo.FindAll(ctx, page, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -32,6 +46,13 @@ func (u *companyUseCase) GetCompanies(ctx context.Context, page, limit int) (*en
 	}
 
 	return response, nil
+}
+
+// GetCompanies は企業情報の一覧を取得します
+// 後方互換性のために残しています
+func (u *companyUseCase) GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error) {
+	usecase := NewGetCompaniesUsecase(u.companyRepo.(repository.GetCompaniesRepository))
+	return usecase.Execute(ctx, page, limit)
 }
 
 // companyUseCase は企業情報に関するユースケースの実装です
