@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
-	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	repository "github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository/company"
 )
 
 // CreateCompanyUsecase は企業情報を作成するためのインターフェースです

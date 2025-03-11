@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
-	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	companyRepo "github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository/company"
 )
 
 // GetCompaniesUsecase は企業情報の一覧を取得するためのインターフェースです
@@ -13,11 +13,11 @@ type GetCompaniesUsecase interface {
 }
 
 type getCompaniesUsecase struct {
-	repo repository.GetCompaniesRepository
+	repo companyRepo.GetCompaniesRepository
 }
 
 // NewGetCompaniesUsecase は新しいGetCompaniesUsecaseインスタンスを作成します
-func NewGetCompaniesUsecase(repo repository.GetCompaniesRepository) GetCompaniesUsecase {
+func NewGetCompaniesUsecase(repo companyRepo.GetCompaniesRepository) GetCompaniesUsecase {
 	return &getCompaniesUsecase{repo: repo}
 }
 
@@ -57,20 +57,20 @@ func (u *companyUseCase) GetCompanies(ctx context.Context, page, limit int) (*en
 
 // companyUseCase は企業情報に関するユースケースの実装です
 type companyUseCase struct {
-	createCompanyRepo repository.CreateCompanyRepository
-	updateCompanyRepo repository.UpdateCompanyRepository
-	deleteCompanyRepo repository.DeleteCompanyRepository
-	getCompanyRepo    repository.GetCompanyRepository
-	getCompaniesRepo  repository.GetCompaniesRepository
+	createCompanyRepo companyRepo.CreateCompanyRepository
+	updateCompanyRepo companyRepo.UpdateCompanyRepository
+	deleteCompanyRepo companyRepo.DeleteCompanyRepository
+	getCompanyRepo    companyRepo.GetCompanyRepository
+	getCompaniesRepo  companyRepo.GetCompaniesRepository
 }
 
 // NewCompanyUseCase は企業ユースケースの新しいインスタンスを作成します
 func NewCompanyUseCase(
-	createCompanyRepo repository.CreateCompanyRepository,
-	updateCompanyRepo repository.UpdateCompanyRepository,
-	deleteCompanyRepo repository.DeleteCompanyRepository,
-	getCompanyRepo repository.GetCompanyRepository,
-	getCompaniesRepo repository.GetCompaniesRepository,
+	createCompanyRepo companyRepo.CreateCompanyRepository,
+	updateCompanyRepo companyRepo.UpdateCompanyRepository,
+	deleteCompanyRepo companyRepo.DeleteCompanyRepository,
+	getCompanyRepo companyRepo.GetCompanyRepository,
+	getCompaniesRepo companyRepo.GetCompaniesRepository,
 ) CompanyUseCase {
 	return &companyUseCase{
 		createCompanyRepo: createCompanyRepo,

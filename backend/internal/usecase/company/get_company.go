@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
-	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	repository "github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository/company"
 )
 
 // GetCompanyUsecase は企業情報を取得するためのインターフェースです

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
-	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	repository "github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository/company"
 )
 
 // UpdateCompanyUsecase は企業情報を更新するためのインターフェースです

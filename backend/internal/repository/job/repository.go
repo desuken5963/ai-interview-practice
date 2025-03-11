@@ -1,7 +1,7 @@
 package job
 
 import (
-	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	repository "github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository/job"
 	"gorm.io/gorm"
 )
 

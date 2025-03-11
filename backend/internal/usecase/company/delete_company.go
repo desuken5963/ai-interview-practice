@@ -3,7 +3,7 @@ package company
 import (
 	"context"
 
-	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
+	repository "github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository/company"
 )
 
 // DeleteCompanyUsecase は企業情報を削除するためのインターフェースです

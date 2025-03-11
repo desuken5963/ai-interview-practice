@@ -25,7 +25,7 @@ func GetJob(jobUseCase job.JobUseCase) gin.HandlerFunc {
 		}
 
 		// ユースケースを呼び出し
-		job, err := jobUseCase.GetJob(c.Request.Context(), id)
+		job, err := jobUseCase.GetJobByID(c.Request.Context(), id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": gin.H{

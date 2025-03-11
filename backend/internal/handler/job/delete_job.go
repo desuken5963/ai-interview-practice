@@ -38,7 +38,7 @@ func DeleteJob(jobUseCase job.JobUseCase) gin.HandlerFunc {
 		}
 
 		// 求人が指定された企業に属しているか確認
-		job, err := jobUseCase.GetJob(c.Request.Context(), jobID)
+		job, err := jobUseCase.GetJobByID(c.Request.Context(), jobID)
 		if err != nil {
 			c.JSON(http.StatusNotFound, gin.H{
 				"error": gin.H{
