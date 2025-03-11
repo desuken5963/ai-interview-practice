@@ -53,9 +53,3 @@ func (r *createCompanyRepository) Create(ctx context.Context, company *entity.Co
 	// トランザクションをコミット
 	return tx.Commit().Error
 }
-
-// 後方互換性のための実装
-func (r *companyRepository) Create(ctx context.Context, company *entity.Company) error {
-	repo := NewCreateCompanyRepository(r.db)
-	return repo.Create(ctx, company)
-}

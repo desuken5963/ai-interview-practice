@@ -61,9 +61,3 @@ func (r *updateCompanyRepository) Update(ctx context.Context, company *entity.Co
 	// トランザクションをコミット
 	return tx.Commit().Error
 }
-
-// 後方互換性のための実装
-func (r *companyRepository) Update(ctx context.Context, company *entity.Company) error {
-	repo := NewUpdateCompanyRepository(r.db)
-	return repo.Update(ctx, company)
-}

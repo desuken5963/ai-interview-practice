@@ -43,12 +43,25 @@ func main() {
 	}
 
 	// リポジトリの初期化
-	companyRepo := companyRepository.NewCompanyRepository(db)
+	// 各APIごとのリポジトリを初期化
+	createCompanyRepo := companyRepository.NewCreateCompanyRepository(db)
+	updateCompanyRepo := companyRepository.NewUpdateCompanyRepository(db)
+	deleteCompanyRepo := companyRepository.NewDeleteCompanyRepository(db)
+	getCompanyRepo := companyRepository.NewGetCompanyRepository(db)
+	getCompaniesRepo := companyRepository.NewGetCompaniesRepository(db)
+
 	jobRepo := jobRepository.NewJobRepository(db)
 
 	// ユースケースの初期化
-	companyUC := companyUseCase.NewCompanyUseCase(companyRepo)
-	jobUC := jobUseCase.NewJobUseCase(jobRepo, companyRepo)
+	companyUC := companyUseCase.NewCompanyUseCase(
+		createCompanyRepo,
+		updateCompanyRepo,
+		deleteCompanyRepo,
+		getCompanyRepo,
+		getCompaniesRepo,
+	)
+
+	jobUC := jobUseCase.NewJobUseCase(jobRepo, getCompanyRepo)
 
 	// ルーターの初期化
 	router := gin.Default()

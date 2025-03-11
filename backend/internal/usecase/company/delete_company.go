@@ -28,6 +28,6 @@ func (u *deleteCompanyUsecase) Execute(ctx context.Context, id int) error {
 // DeleteCompany は指定されたIDの企業情報を削除します
 // 後方互換性のために残しています
 func (u *companyUseCase) DeleteCompany(ctx context.Context, id int) error {
-	usecase := NewDeleteCompanyUsecase(u.companyRepo)
+	usecase := NewDeleteCompanyUsecase(u.deleteCompanyRepo)
 	return usecase.Execute(ctx, id)
 }

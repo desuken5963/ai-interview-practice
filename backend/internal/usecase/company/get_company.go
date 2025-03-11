@@ -29,6 +29,6 @@ func (u *getCompanyUsecase) Execute(ctx context.Context, id int) (*entity.Compan
 // GetCompanyByID は指定されたIDの企業情報を取得します
 // 後方互換性のために残しています
 func (u *companyUseCase) GetCompanyByID(ctx context.Context, id int) (*entity.Company, error) {
-	usecase := NewGetCompanyUsecase(u.companyRepo)
+	usecase := NewGetCompanyUsecase(u.getCompanyRepo)
 	return usecase.Execute(ctx, id)
 }

@@ -32,19 +32,19 @@ func (r *deleteCompanyRepository) Delete(ctx context.Context, id int) error {
 		}
 	}()
 
-	// 関連する求人情報のカスタムフィールドを削除
-	if err := tx.Exec("DELETE jcf FROM job_custom_fields jcf JOIN job_postings jp ON jcf.job_id = jp.id WHERE jp.company_id = ?", id).Error; err != nil {
+	// 企業情報が存在するか確認
+	var count int64
+	if err := tx.Model(&entity.Company{}).Where("id = ?", id).Count(&count).Error; err != nil {
 		tx.Rollback()
 		return err
 	}
 
-	// 関連する求人情報を削除
-	if err := tx.Where("company_id = ?", id).Delete(&entity.JobPosting{}).Error; err != nil {
+	if count == 0 {
 		tx.Rollback()
-		return err
+		return gorm.ErrRecordNotFound
 	}
 
-	// 企業のカスタムフィールドを削除
+	// カスタムフィールドを削除
 	if err := tx.Where("company_id = ?", id).Delete(&entity.CompanyCustomField{}).Error; err != nil {
 		tx.Rollback()
 		return err
@@ -58,10 +58,4 @@ func (r *deleteCompanyRepository) Delete(ctx context.Context, id int) error {
 
 	// トランザクションをコミット
 	return tx.Commit().Error
-}
-
-// 後方互換性のための実装
-func (r *companyRepository) Delete(ctx context.Context, id int) error {
-	repo := NewDeleteCompanyRepository(r.db)
-	return repo.Delete(ctx, id)
 }

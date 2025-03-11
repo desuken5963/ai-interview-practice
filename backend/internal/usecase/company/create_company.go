@@ -13,11 +13,11 @@ type CreateCompanyUsecase interface {
 }
 
 type createCompanyUsecase struct {
-	repo repository.CompanyRepository
+	repo repository.CreateCompanyRepository
 }
 
 // NewCreateCompanyUsecase は新しいCreateCompanyUsecaseインスタンスを作成します
-func NewCreateCompanyUsecase(repo repository.CompanyRepository) CreateCompanyUsecase {
+func NewCreateCompanyUsecase(repo repository.CreateCompanyRepository) CreateCompanyUsecase {
 	return &createCompanyUsecase{repo: repo}
 }
 
@@ -29,6 +29,6 @@ func (u *createCompanyUsecase) Execute(ctx context.Context, company *entity.Comp
 // CreateCompany は新しい企業情報を作成します
 // 後方互換性のために残しています
 func (u *companyUseCase) CreateCompany(ctx context.Context, company *entity.Company) error {
-	usecase := NewCreateCompanyUsecase(u.companyRepo)
+	usecase := NewCreateCompanyUsecase(u.createCompanyRepo)
 	return usecase.Execute(ctx, company)
 }

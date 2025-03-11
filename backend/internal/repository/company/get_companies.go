@@ -22,38 +22,23 @@ func (r *getCompaniesRepository) FindAll(ctx context.Context, page, limit int) (
 	var companies []entity.Company
 	var total int64
 
-	// オフセットを計算
-	offset := (page - 1) * limit
-
-	// 総件数を取得
+	// 総数を取得
 	if err := r.db.Model(&entity.Company{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// 企業情報を取得
+	// ページネーション
+	offset := (page - 1) * limit
 	if err := r.db.Offset(offset).Limit(limit).Find(&companies).Error; err != nil {
 		return nil, 0, err
 	}
 
-	// カスタムフィールドを取得
+	// 各企業のカスタムフィールドを取得
 	for i := range companies {
-		if err := r.db.Model(&companies[i]).Association("CustomFields").Find(&companies[i].CustomFields); err != nil {
+		if err := r.db.Where("company_id = ?", companies[i].ID).Find(&companies[i].CustomFields).Error; err != nil {
 			return nil, 0, err
 		}
-
-		// 求人数を取得
-		var jobCount int64
-		if err := r.db.Model(&entity.JobPosting{}).Where("company_id = ?", companies[i].ID).Count(&jobCount).Error; err != nil {
-			return nil, 0, err
-		}
-		companies[i].JobCount = int(jobCount)
 	}
 
 	return companies, total, nil
-}
-
-// 後方互換性のための実装
-func (r *companyRepository) FindAll(ctx context.Context, page, limit int) ([]entity.Company, int64, error) {
-	repo := NewGetCompaniesRepository(r.db)
-	return repo.FindAll(ctx, page, limit)
 }

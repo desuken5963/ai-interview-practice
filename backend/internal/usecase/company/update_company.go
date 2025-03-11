@@ -29,6 +29,6 @@ func (u *updateCompanyUsecase) Execute(ctx context.Context, company *entity.Comp
 // UpdateCompany は既存の企業情報を更新します
 // 後方互換性のために残しています
 func (u *companyUseCase) UpdateCompany(ctx context.Context, company *entity.Company) error {
-	usecase := NewUpdateCompanyUsecase(u.companyRepo)
+	usecase := NewUpdateCompanyUsecase(u.updateCompanyRepo)
 	return usecase.Execute(ctx, company)
 }

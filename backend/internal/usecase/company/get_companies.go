@@ -51,19 +51,33 @@ func (u *getCompaniesUsecase) Execute(ctx context.Context, page, limit int) (*en
 // GetCompanies は企業情報の一覧を取得します
 // 後方互換性のために残しています
 func (u *companyUseCase) GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error) {
-	usecase := NewGetCompaniesUsecase(u.companyRepo.(repository.GetCompaniesRepository))
+	usecase := NewGetCompaniesUsecase(u.getCompaniesRepo)
 	return usecase.Execute(ctx, page, limit)
 }
 
 // companyUseCase は企業情報に関するユースケースの実装です
 type companyUseCase struct {
-	companyRepo repository.CompanyRepository
+	createCompanyRepo repository.CreateCompanyRepository
+	updateCompanyRepo repository.UpdateCompanyRepository
+	deleteCompanyRepo repository.DeleteCompanyRepository
+	getCompanyRepo    repository.GetCompanyRepository
+	getCompaniesRepo  repository.GetCompaniesRepository
 }
 
 // NewCompanyUseCase は企業ユースケースの新しいインスタンスを作成します
-func NewCompanyUseCase(companyRepo repository.CompanyRepository) CompanyUseCase {
+func NewCompanyUseCase(
+	createCompanyRepo repository.CreateCompanyRepository,
+	updateCompanyRepo repository.UpdateCompanyRepository,
+	deleteCompanyRepo repository.DeleteCompanyRepository,
+	getCompanyRepo repository.GetCompanyRepository,
+	getCompaniesRepo repository.GetCompaniesRepository,
+) CompanyUseCase {
 	return &companyUseCase{
-		companyRepo: companyRepo,
+		createCompanyRepo: createCompanyRepo,
+		updateCompanyRepo: updateCompanyRepo,
+		deleteCompanyRepo: deleteCompanyRepo,
+		getCompanyRepo:    getCompanyRepo,
+		getCompaniesRepo:  getCompaniesRepo,
 	}
 }
 
