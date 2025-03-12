@@ -1,9 +1,9 @@
 package company
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -13,53 +13,71 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
+// DeleteCompanyMockUseCase はテスト用のモックです
+type DeleteCompanyMockUseCase struct {
+	mock.Mock
+}
+
+func (m *DeleteCompanyMockUseCase) Execute(ctx context.Context, id int) error {
+	args := m.Called(ctx, id)
+	return args.Error(0)
+}
+
 func TestDeleteCompany(t *testing.T) {
 	// テストケース
 	tests := []struct {
 		name           string
 		id             string
-		mockError      error
+		mockSetup      func(*DeleteCompanyMockUseCase)
 		expectedStatus int
-		expectedBody   map[string]interface{}
+		expectedBody   interface{}
 	}{
 		{
-			name:           "正常に企業を削除できる",
-			id:             "1",
-			mockError:      nil,
+			name: "正常系: 企業情報の削除",
+			id:   "1",
+			mockSetup: func(m *DeleteCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, 1).Return(nil)
+			},
 			expectedStatus: http.StatusNoContent,
 			expectedBody:   nil,
 		},
 		{
-			name:           "不正なIDパラメータの場合はエラーを返す",
-			id:             "invalid",
-			mockError:      nil,
+			name: "異常系: 無効なID",
+			id:   "invalid",
+			mockSetup: func(m *DeleteCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, mock.Anything).Return(errors.New("invalid id"))
+			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			expectedBody: gin.H{
+				"error": gin.H{
 					"code":    "INVALID_ID",
 					"message": "IDは整数である必要があります",
 				},
 			},
 		},
 		{
-			name:           "存在しない企業IDの場合は404エラーを返す",
-			id:             "999",
-			mockError:      errors.New("企業が見つかりません"),
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
-					"code":    "SERVER_ERROR",
-					"message": "サーバーエラーが発生しました",
+			name: "異常系: 企業が存在しない",
+			id:   "999",
+			mockSetup: func(m *DeleteCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, 999).Return(errors.New("not found"))
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody: gin.H{
+				"error": gin.H{
+					"code":    "NOT_FOUND",
+					"message": "企業が見つかりません",
 				},
 			},
 		},
 		{
-			name:           "サーバーエラーの場合は500エラーを返す",
-			id:             "1",
-			mockError:      errors.New("database error"),
+			name: "異常系: サーバーエラー",
+			id:   "1",
+			mockSetup: func(m *DeleteCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, 1).Return(errors.New("server error"))
+			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			expectedBody: gin.H{
+				"error": gin.H{
 					"code":    "SERVER_ERROR",
 					"message": "サーバーエラーが発生しました",
 				},
@@ -69,53 +87,34 @@ func TestDeleteCompany(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Ginのテストモードを設定
-			gin.SetMode(gin.TestMode)
+			// モックの設定
+			mockUC := new(DeleteCompanyMockUseCase)
+			tt.mockSetup(mockUC)
 
-			// モックユースケースの作成
-			mockUseCase := new(MockCompanyUseCase)
+			// ハンドラーの作成
+			handler := NewDeleteCompanyHandler(mockUC)
 
-			// 正常なパラメータの場合のみモックの振る舞いを設定
-			if tt.id != "invalid" {
-				id := 0
-				fmt.Sscanf(tt.id, "%d", &id)
-				mockUseCase.On("DeleteCompany", mock.Anything, id).
-					Return(tt.mockError)
+			// テスト用のGinコンテキストの作成
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Params = []gin.Param{{Key: "id", Value: tt.id}}
+			c.Request = httptest.NewRequest("DELETE", "/api/v1/companies/"+tt.id, nil)
+
+			// ハンドラーの実行
+			handler.Handle(c)
+
+			// アサーション
+			assert.Equal(t, tt.expectedStatus, w.Code)
+
+			if tt.expectedBody != nil {
+				var response gin.H
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedBody, response)
 			}
 
-			// テスト用のルーターを作成
-			router := gin.New()
-			router.DELETE("/api/v1/companies/:id", DeleteCompany(mockUseCase))
-
-			// テストリクエストを作成
-			req := httptest.NewRequest(http.MethodDelete, "/api/v1/companies/"+tt.id, nil)
-			rec := httptest.NewRecorder()
-
-			// リクエストを実行
-			router.ServeHTTP(rec, req)
-
-			// レスポンスを検証
-			assert.Equal(t, tt.expectedStatus, rec.Code)
-
-			// 204 No Contentの場合はボディが空であることを確認
-			if tt.expectedStatus == http.StatusNoContent {
-				assert.Empty(t, rec.Body.String())
-			} else {
-				// JSONレスポンスをパース
-				var response map[string]interface{}
-				if rec.Body.Len() > 0 {
-					err := json.NewDecoder(rec.Body).Decode(&response)
-					assert.NoError(t, err)
-
-					// 期待されるレスポンスボディを検証
-					if tt.expectedBody != nil {
-						assert.Equal(t, tt.expectedBody, response)
-					}
-				}
-			}
-
-			// モックが期待通り呼ばれたことを検証
-			mockUseCase.AssertExpectations(t)
+			// モックの検証
+			mockUC.AssertExpectations(t)
 		})
 	}
 }

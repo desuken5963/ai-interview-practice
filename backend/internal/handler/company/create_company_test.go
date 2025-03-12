@@ -2,90 +2,110 @@ package company
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
+	"github.com/takanoakira/ai-interview-practice/backend/test"
 )
 
+// CreateCompanyMockUseCase はテスト用のモックです
+type CreateCompanyMockUseCase struct {
+	mock.Mock
+}
+
+func (m *CreateCompanyMockUseCase) Execute(ctx context.Context, company *entity.Company) error {
+	args := m.Called(ctx, company)
+	return args.Error(0)
+}
+
 func TestCreateCompany(t *testing.T) {
+	// テスト用の企業データ
+	now := time.Now()
+	mockCompany := &entity.Company{
+		ID:                  1,
+		Name:                "テスト企業",
+		BusinessDescription: test.StringPtr("テスト企業の説明"),
+		CustomFields: []entity.CompanyCustomField{
+			{
+				ID:        1,
+				CompanyID: 1,
+				FieldName: "業界",
+				Content:   "IT",
+			},
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
 	// テストケース
 	tests := []struct {
 		name           string
-		requestBody    map[string]interface{}
-		mockError      error
+		requestBody    interface{}
+		mockSetup      func(*CreateCompanyMockUseCase)
 		expectedStatus int
-		expectedBody   map[string]interface{}
+		expectedBody   interface{}
 	}{
 		{
-			name: "正常に企業を作成できる",
-			requestBody: map[string]interface{}{
-				"name":                 "新規企業",
-				"business_description": "新規企業の説明",
-				"custom_fields": []map[string]interface{}{
+			name: "正常系: 企業情報の作成",
+			requestBody: gin.H{
+				"name":                 "テスト企業",
+				"business_description": "テスト企業の説明",
+				"custom_fields": []gin.H{
 					{
 						"field_name": "業界",
 						"content":    "IT",
 					},
 				},
 			},
-			mockError:      nil,
+			mockSetup: func(m *CreateCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, mock.MatchedBy(func(c *entity.Company) bool {
+					return c.Name == "テスト企業" &&
+						*c.BusinessDescription == "テスト企業の説明" &&
+						len(c.CustomFields) == 1 &&
+						c.CustomFields[0].FieldName == "業界" &&
+						c.CustomFields[0].Content == "IT"
+				})).Return(nil)
+			},
 			expectedStatus: http.StatusCreated,
-			expectedBody: map[string]interface{}{
-				"id":                   float64(1),
-				"name":                 "新規企業",
-				"business_description": "新規企業の説明",
-				"job_count":            float64(0),
-				"created_at":           "",
-				"updated_at":           "",
-				"custom_fields": []interface{}{
-					map[string]interface{}{
-						"id":         float64(0),
-						"company_id": float64(0),
-						"field_name": "業界",
-						"content":    "IT",
-						"created_at": "",
-						"updated_at": "",
-					},
-				},
-			},
+			expectedBody:   mockCompany,
 		},
 		{
-			name: "必須フィールドがない場合はエラーを返す",
-			requestBody: map[string]interface{}{
-				"business_description": "名前のない企業の説明",
+			name: "異常系: 必須フィールドの欠落",
+			requestBody: gin.H{
+				"business_description": "テスト企業の説明",
 			},
-			mockError:      nil,
+			mockSetup: func(m *CreateCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, mock.Anything).Return(errors.New("name is required"))
+			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
-					"code":    "VALIDATION_ERROR",
-					"message": "バリデーションエラーが発生しました",
-					"details": []interface{}{
-						map[string]interface{}{
-							"field":   "name",
-							"message": "企業名は必須です",
-						},
-					},
+			expectedBody: gin.H{
+				"error": gin.H{
+					"code":    "INVALID_REQUEST",
+					"message": "企業名は必須です",
 				},
 			},
 		},
 		{
-			name: "サーバーエラーの場合は500エラーを返す",
-			requestBody: map[string]interface{}{
-				"name":                 "エラー企業",
-				"business_description": "エラー企業の説明",
+			name: "異常系: サーバーエラー",
+			requestBody: gin.H{
+				"name":                 "テスト企業",
+				"business_description": "テスト企業の説明",
 			},
-			mockError:      errors.New("database error"),
+			mockSetup: func(m *CreateCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, mock.Anything).Return(errors.New("server error"))
+			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			expectedBody: gin.H{
+				"error": gin.H{
 					"code":    "SERVER_ERROR",
 					"message": "サーバーエラーが発生しました",
 				},
@@ -95,88 +115,42 @@ func TestCreateCompany(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Ginのテストモードを設定
-			gin.SetMode(gin.TestMode)
+			// モックの設定
+			mockUC := new(CreateCompanyMockUseCase)
+			tt.mockSetup(mockUC)
 
-			// モックユースケースの作成
-			mockUseCase := new(MockCompanyUseCase)
+			// ハンドラーの作成
+			handler := NewCreateCompanyHandler(mockUC)
 
-			// 正常なリクエストの場合のみモックの振る舞いを設定
-			if tt.requestBody["name"] != nil && tt.requestBody["name"] != "" {
-				mockUseCase.On("CreateCompany", mock.Anything, mock.AnythingOfType("*entity.Company")).
-					Run(func(args mock.Arguments) {
-						// モックに渡された企業オブジェクトを検証
-						company := args.Get(1).(*entity.Company)
-						assert.Equal(t, tt.requestBody["name"], company.Name)
-						if tt.requestBody["business_description"] != nil {
-							assert.Equal(t, tt.requestBody["business_description"], *company.BusinessDescription)
-						}
-
-						// IDを設定（作成成功をシミュレート）
-						company.ID = 1
-					}).
-					Return(tt.mockError)
-			}
-
-			// テスト用のルーターを作成
-			router := gin.New()
-			router.POST("/api/v1/companies", CreateCompany(mockUseCase))
-
-			// リクエストボディをJSON化
-			jsonData, err := json.Marshal(tt.requestBody)
+			// リクエストボディの作成
+			body, err := json.Marshal(tt.requestBody)
 			assert.NoError(t, err)
 
-			// テストリクエストを作成
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/companies", bytes.NewBuffer(jsonData))
-			req.Header.Set("Content-Type", "application/json")
-			rec := httptest.NewRecorder()
+			// テスト用のGinコンテキストの作成
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest("POST", "/api/v1/companies", bytes.NewBuffer(body))
 
-			// リクエストを実行
-			router.ServeHTTP(rec, req)
+			// ハンドラーの実行
+			handler.Handle(c)
 
-			// レスポンスを検証
-			assert.Equal(t, tt.expectedStatus, rec.Code)
+			// アサーション
+			assert.Equal(t, tt.expectedStatus, w.Code)
 
-			// JSONレスポンスをパース
-			var response map[string]interface{}
-			err = json.Unmarshal(rec.Body.Bytes(), &response)
-			assert.NoError(t, err)
-
-			// 日付フィールドは動的に生成されるため、テスト対象から除外
-			if company, ok := response["custom_fields"].([]interface{}); ok {
-				for _, field := range company {
-					if cf, ok := field.(map[string]interface{}); ok {
-						delete(cf, "created_at")
-						delete(cf, "updated_at")
-					}
-				}
-			}
-			if _, ok := response["created_at"]; ok {
-				delete(response, "created_at")
-				delete(response, "updated_at")
-			}
-
-			// 期待されるレスポンスボディを検証
-			if tt.expectedBody != nil {
-				// 日付フィールドは動的に生成されるため、期待値からも削除
-				if company, ok := tt.expectedBody["custom_fields"].([]interface{}); ok {
-					for _, field := range company {
-						if cf, ok := field.(map[string]interface{}); ok {
-							delete(cf, "created_at")
-							delete(cf, "updated_at")
-						}
-					}
-				}
-				if _, ok := tt.expectedBody["created_at"]; ok {
-					delete(tt.expectedBody, "created_at")
-					delete(tt.expectedBody, "updated_at")
-				}
-
+			if tt.expectedStatus == http.StatusCreated {
+				var response entity.Company
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedBody.(*entity.Company), &response)
+			} else {
+				var response gin.H
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedBody, response)
 			}
 
-			// モックが期待通り呼ばれたことを検証
-			mockUseCase.AssertExpectations(t)
+			// モックの検証
+			mockUC.AssertExpectations(t)
 		})
 	}
 }

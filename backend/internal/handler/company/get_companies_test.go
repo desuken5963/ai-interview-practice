@@ -13,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
+	"github.com/takanoakira/ai-interview-practice/backend/test"
 )
 
 // GetCompaniesMockUseCase はテスト用のモックです
@@ -35,7 +36,7 @@ func TestGetCompanies(t *testing.T) {
 		{
 			ID:                  1,
 			Name:                "テスト企業1",
-			BusinessDescription: stringPtr("テスト企業1の説明"),
+			BusinessDescription: test.StringPtr("テスト企業1の説明"),
 			CustomFields: []entity.CompanyCustomField{
 				{
 					ID:        1,
@@ -50,7 +51,7 @@ func TestGetCompanies(t *testing.T) {
 		{
 			ID:                  2,
 			Name:                "テスト企業2",
-			BusinessDescription: stringPtr("テスト企業2の説明"),
+			BusinessDescription: test.StringPtr("テスト企業2の説明"),
 			CustomFields: []entity.CompanyCustomField{
 				{
 					ID:        2,
@@ -168,9 +169,4 @@ func TestGetCompanies(t *testing.T) {
 			mockUC.AssertExpectations(t)
 		})
 	}
-}
-
-// stringPtr は文字列のポインタを返すヘルパー関数です
-func stringPtr(s string) *string {
-	return &s
 }

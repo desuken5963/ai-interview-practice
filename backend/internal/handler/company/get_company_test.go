@@ -1,100 +1,107 @@
 package company
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
+	"github.com/takanoakira/ai-interview-practice/backend/test"
 )
 
+// GetCompanyMockUseCase はテスト用のモックです
+type GetCompanyMockUseCase struct {
+	mock.Mock
+}
+
+func (m *GetCompanyMockUseCase) Execute(ctx context.Context, id int) (*entity.Company, error) {
+	args := m.Called(ctx, id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*entity.Company), args.Error(1)
+}
+
 func TestGetCompany(t *testing.T) {
+	// テスト用の企業データ
+	now := time.Now()
+	mockCompany := &entity.Company{
+		ID:                  1,
+		Name:                "テスト企業",
+		BusinessDescription: test.StringPtr("テスト企業の説明"),
+		CustomFields: []entity.CompanyCustomField{
+			{
+				ID:        1,
+				CompanyID: 1,
+				FieldName: "業界",
+				Content:   "IT",
+			},
+		},
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+
 	// テストケース
 	tests := []struct {
 		name           string
 		id             string
-		mockCompany    *entity.Company
-		mockError      error
+		mockSetup      func(*GetCompanyMockUseCase)
 		expectedStatus int
-		expectedBody   map[string]interface{}
+		expectedBody   interface{}
 	}{
 		{
-			name: "正常に企業を取得できる",
+			name: "正常系: 企業情報の取得",
 			id:   "1",
-			mockCompany: &entity.Company{
-				ID:                  1,
-				Name:                "テスト企業",
-				BusinessDescription: stringPtr("テスト企業の説明"),
-				CustomFields: []entity.CompanyCustomField{
-					{
-						ID:        1,
-						CompanyID: 1,
-						FieldName: "業界",
-						Content:   "IT",
-					},
-				},
+			mockSetup: func(m *GetCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, 1).Return(mockCompany, nil)
 			},
-			mockError:      nil,
 			expectedStatus: http.StatusOK,
-			expectedBody: map[string]interface{}{
-				"id":                   float64(1),
-				"name":                 "テスト企業",
-				"business_description": "テスト企業の説明",
-				"job_count":            float64(0),
-				"created_at":           "",
-				"updated_at":           "",
-				"custom_fields": []interface{}{
-					map[string]interface{}{
-						"id":         float64(1),
-						"company_id": float64(1),
-						"field_name": "業界",
-						"content":    "IT",
-						"created_at": "",
-						"updated_at": "",
-					},
-				},
-			},
+			expectedBody:   mockCompany,
 		},
 		{
-			name:           "不正なIDパラメータの場合はエラーを返す",
-			id:             "invalid",
-			mockCompany:    nil,
-			mockError:      nil,
+			name: "異常系: 無効なID",
+			id:   "invalid",
+			mockSetup: func(m *GetCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, 0).Return(nil, errors.New("invalid id"))
+			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			expectedBody: gin.H{
+				"error": gin.H{
 					"code":    "INVALID_ID",
 					"message": "IDは整数である必要があります",
 				},
 			},
 		},
 		{
-			name:           "存在しない企業IDの場合は404エラーを返す",
-			id:             "999",
-			mockCompany:    nil,
-			mockError:      errors.New("企業が見つかりません"),
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
-					"code":    "SERVER_ERROR",
-					"message": "サーバーエラーが発生しました",
+			name: "異常系: 企業が存在しない",
+			id:   "999",
+			mockSetup: func(m *GetCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, 999).Return(nil, errors.New("not found"))
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedBody: gin.H{
+				"error": gin.H{
+					"code":    "NOT_FOUND",
+					"message": "企業が見つかりません",
 				},
 			},
 		},
 		{
-			name:           "サーバーエラーの場合は500エラーを返す",
-			id:             "1",
-			mockCompany:    nil,
-			mockError:      errors.New("database error"),
+			name: "異常系: サーバーエラー",
+			id:   "1",
+			mockSetup: func(m *GetCompanyMockUseCase) {
+				m.On("Execute", mock.Anything, 1).Return(nil, errors.New("server error"))
+			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			expectedBody: gin.H{
+				"error": gin.H{
 					"code":    "SERVER_ERROR",
 					"message": "サーバーエラーが発生しました",
 				},
@@ -104,74 +111,39 @@ func TestGetCompany(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Ginのテストモードを設定
-			gin.SetMode(gin.TestMode)
+			// モックの設定
+			mockUC := new(GetCompanyMockUseCase)
+			tt.mockSetup(mockUC)
 
-			// モックユースケースの作成
-			mockUseCase := new(MockCompanyUseCase)
+			// ハンドラーの作成
+			handler := NewGetCompanyHandler(mockUC)
 
-			// 正常なパラメータの場合のみモックの振る舞いを設定
-			if tt.id != "invalid" {
-				id := 0
-				fmt.Sscanf(tt.id, "%d", &id)
-				mockUseCase.On("GetCompanyByID", mock.Anything, id).
-					Return(tt.mockCompany, tt.mockError)
-			}
+			// テスト用のGinコンテキストの作成
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Params = []gin.Param{{Key: "id", Value: tt.id}}
+			c.Request = httptest.NewRequest("GET", "/api/v1/companies/"+tt.id, nil)
 
-			// テスト用のルーターを作成
-			router := gin.New()
-			router.GET("/api/v1/companies/:id", GetCompany(mockUseCase))
+			// ハンドラーの実行
+			handler.Handle(c)
 
-			// テストリクエストを作成
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/companies/"+tt.id, nil)
-			rec := httptest.NewRecorder()
+			// アサーション
+			assert.Equal(t, tt.expectedStatus, w.Code)
 
-			// リクエストを実行
-			router.ServeHTTP(rec, req)
-
-			// レスポンスを検証
-			assert.Equal(t, tt.expectedStatus, rec.Code)
-
-			// JSONレスポンスをパース
-			var response map[string]interface{}
-			err := json.Unmarshal(rec.Body.Bytes(), &response)
-			assert.NoError(t, err)
-
-			// 日付フィールドは動的に生成されるため、テスト対象から除外
-			if company, ok := response["custom_fields"].([]interface{}); ok {
-				for _, field := range company {
-					if cf, ok := field.(map[string]interface{}); ok {
-						delete(cf, "created_at")
-						delete(cf, "updated_at")
-					}
-				}
-			}
-			if _, ok := response["created_at"]; ok {
-				delete(response, "created_at")
-				delete(response, "updated_at")
-			}
-
-			// 期待されるレスポンスボディを検証
-			if tt.expectedBody != nil {
-				// 日付フィールドは動的に生成されるため、期待値からも削除
-				if company, ok := tt.expectedBody["custom_fields"].([]interface{}); ok {
-					for _, field := range company {
-						if cf, ok := field.(map[string]interface{}); ok {
-							delete(cf, "created_at")
-							delete(cf, "updated_at")
-						}
-					}
-				}
-				if _, ok := tt.expectedBody["created_at"]; ok {
-					delete(tt.expectedBody, "created_at")
-					delete(tt.expectedBody, "updated_at")
-				}
-
+			if tt.expectedStatus == http.StatusOK {
+				var response entity.Company
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedBody.(*entity.Company), &response)
+			} else {
+				var response gin.H
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedBody, response)
 			}
 
-			// モックが期待通り呼ばれたことを検証
-			mockUseCase.AssertExpectations(t)
+			// モックの検証
+			mockUC.AssertExpectations(t)
 		})
 	}
 }
