@@ -50,33 +50,9 @@ func (h *DeleteCompanyHandler) Handle(c *gin.Context) {
 
 // DeleteCompany は企業情報を削除するハンドラー関数を返します
 // 後方互換性のために残しています
-func DeleteCompany(companyUseCase company.CompanyUseCase) gin.HandlerFunc {
+func DeleteCompany(deleteCompanyUC company.DeleteCompanyUsecase) gin.HandlerFunc {
+	handler := NewDeleteCompanyHandler(deleteCompanyUC)
 	return func(c *gin.Context) {
-		// パスパラメータからIDを取得
-		idStr := c.Param("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": gin.H{
-					"code":    "INVALID_ID",
-					"message": "IDは整数である必要があります",
-				},
-			})
-			return
-		}
-
-		// ユースケースを呼び出し
-		if err := companyUseCase.DeleteCompany(c.Request.Context(), id); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": gin.H{
-					"code":    "SERVER_ERROR",
-					"message": "サーバーエラーが発生しました",
-				},
-			})
-			return
-		}
-
-		// 成功レスポンスを返す
-		c.Status(http.StatusNoContent)
+		handler.Handle(c)
 	}
 }

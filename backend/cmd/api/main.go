@@ -7,10 +7,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
-	"github.com/takanoakira/ai-interview-practice/backend/internal/handler/company"
-	"github.com/takanoakira/ai-interview-practice/backend/internal/handler/job"
 	companyRepo "github.com/takanoakira/ai-interview-practice/backend/internal/repository/company"
 	jobRepo "github.com/takanoakira/ai-interview-practice/backend/internal/repository/job"
+	"github.com/takanoakira/ai-interview-practice/backend/internal/routes"
 	companyUsecase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/company"
 	jobUsecase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job"
 	"gorm.io/driver/mysql"
@@ -60,13 +59,11 @@ func main() {
 
 	// ユースケースの初期化
 	// 企業関連のユースケース
-	companyUC := companyUsecase.NewCompanyUseCase(
-		createCompanyRepo,
-		updateCompanyRepo,
-		deleteCompanyRepo,
-		getCompanyRepo,
-		getCompaniesRepo,
-	)
+	getCompaniesUC := companyUsecase.NewGetCompaniesUsecase(getCompaniesRepo)
+	getCompanyUC := companyUsecase.NewGetCompanyUsecase(getCompanyRepo)
+	createCompanyUC := companyUsecase.NewCreateCompanyUsecase(createCompanyRepo)
+	updateCompanyUC := companyUsecase.NewUpdateCompanyUsecase(updateCompanyRepo)
+	deleteCompanyUC := companyUsecase.NewDeleteCompanyUsecase(deleteCompanyRepo)
 
 	// 求人関連のユースケース
 	getJobsUC := jobUsecase.NewGetJobsUsecase(getJobsRepo)
@@ -93,10 +90,17 @@ func main() {
 	})
 
 	// ハンドラーの登録
-	company.RegisterRoutes(router, companyUC)
+	routes.RegisterCompanyRoutes(
+		router,
+		getCompaniesUC,
+		getCompanyUC,
+		createCompanyUC,
+		updateCompanyUC,
+		deleteCompanyUC,
+	)
 
 	// 求人ハンドラーの登録
-	job.RegisterRoutes(
+	routes.RegisterJobRoutes(
 		router,
 		createJobUC,
 		getJobUC,

@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -14,12 +15,12 @@ import (
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
 )
 
-// モックユースケースの定義
-type MockCompanyUseCase struct {
+// GetCompaniesMockUseCase はテスト用のモックです
+type GetCompaniesMockUseCase struct {
 	mock.Mock
 }
 
-func (m *MockCompanyUseCase) GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error) {
+func (m *GetCompaniesMockUseCase) Execute(ctx context.Context, page, limit int) (*entity.CompanyResponse, error) {
 	args := m.Called(ctx, page, limit)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -27,121 +28,103 @@ func (m *MockCompanyUseCase) GetCompanies(ctx context.Context, page, limit int) 
 	return args.Get(0).(*entity.CompanyResponse), args.Error(1)
 }
 
-func (m *MockCompanyUseCase) GetCompanyByID(ctx context.Context, id int) (*entity.Company, error) {
-	args := m.Called(ctx, id)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*entity.Company), args.Error(1)
-}
-
-func (m *MockCompanyUseCase) CreateCompany(ctx context.Context, company *entity.Company) error {
-	args := m.Called(ctx, company)
-	return args.Error(0)
-}
-
-func (m *MockCompanyUseCase) UpdateCompany(ctx context.Context, company *entity.Company) error {
-	args := m.Called(ctx, company)
-	return args.Error(0)
-}
-
-func (m *MockCompanyUseCase) DeleteCompany(ctx context.Context, id int) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
 func TestGetCompanies(t *testing.T) {
+	// テスト用の企業データ
+	now := time.Now()
+	mockCompanies := []entity.Company{
+		{
+			ID:                  1,
+			Name:                "テスト企業1",
+			BusinessDescription: stringPtr("テスト企業1の説明"),
+			CustomFields: []entity.CompanyCustomField{
+				{
+					ID:        1,
+					CompanyID: 1,
+					FieldName: "業界",
+					Content:   "IT",
+				},
+			},
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+		{
+			ID:                  2,
+			Name:                "テスト企業2",
+			BusinessDescription: stringPtr("テスト企業2の説明"),
+			CustomFields: []entity.CompanyCustomField{
+				{
+					ID:        2,
+					CompanyID: 2,
+					FieldName: "業界",
+					Content:   "金融",
+				},
+			},
+			CreatedAt: now,
+			UpdatedAt: now,
+		},
+	}
+
+	mockResponse := &entity.CompanyResponse{
+		Companies: mockCompanies,
+		Total:     2,
+		Page:      1,
+		Limit:     10,
+	}
+
 	// テストケース
 	tests := []struct {
 		name           string
-		queryParams    string
-		mockResponse   *entity.CompanyResponse
-		mockError      error
+		query          string
+		mockSetup      func(*GetCompaniesMockUseCase)
 		expectedStatus int
-		expectedBody   map[string]interface{}
+		expectedBody   interface{}
 	}{
 		{
-			name:        "正常に企業一覧を取得できる",
-			queryParams: "?page=1&limit=10",
-			mockResponse: &entity.CompanyResponse{
-				Companies: []entity.Company{
-					{
-						ID:                  1,
-						Name:                "テスト企業1",
-						BusinessDescription: stringPtr("テスト企業1の説明"),
-					},
-					{
-						ID:                  2,
-						Name:                "テスト企業2",
-						BusinessDescription: stringPtr("テスト企業2の説明"),
-					},
-				},
-				Total: 2,
-				Page:  1,
-				Limit: 10,
+			name:  "正常系: 企業一覧の取得",
+			query: "page=1&limit=10",
+			mockSetup: func(m *GetCompaniesMockUseCase) {
+				m.On("Execute", mock.Anything, 1, 10).Return(mockResponse, nil)
 			},
-			mockError:      nil,
 			expectedStatus: http.StatusOK,
-			expectedBody: map[string]interface{}{
-				"companies": []interface{}{
-					map[string]interface{}{
-						"id":                   float64(1),
-						"name":                 "テスト企業1",
-						"business_description": "テスト企業1の説明",
-						"custom_fields":        nil,
-						"job_count":            float64(0),
-						"created_at":           "",
-						"updated_at":           "",
-					},
-					map[string]interface{}{
-						"id":                   float64(2),
-						"name":                 "テスト企業2",
-						"business_description": "テスト企業2の説明",
-						"custom_fields":        nil,
-						"job_count":            float64(0),
-						"created_at":           "",
-						"updated_at":           "",
-					},
-				},
-				"total": float64(2),
-				"page":  float64(1),
-				"limit": float64(10),
-			},
+			expectedBody:   mockResponse,
 		},
 		{
-			name:           "不正なページパラメータの場合はエラーを返す",
-			queryParams:    "?page=invalid&limit=10",
-			mockResponse:   nil,
-			mockError:      nil,
+			name:  "異常系: 無効なページ番号",
+			query: "page=0&limit=10",
+			mockSetup: func(m *GetCompaniesMockUseCase) {
+				m.On("Execute", mock.Anything, 0, 10).Return(nil, errors.New("invalid page"))
+			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			expectedBody: gin.H{
+				"error": gin.H{
 					"code":    "INVALID_PAGE",
 					"message": "ページは1以上の整数である必要があります",
 				},
 			},
 		},
 		{
-			name:           "不正なリミットパラメータの場合はエラーを返す",
-			queryParams:    "?page=1&limit=invalid",
-			mockResponse:   nil,
-			mockError:      nil,
+			name:  "異常系: 無効なリミット",
+			query: "page=1&limit=101",
+			mockSetup: func(m *GetCompaniesMockUseCase) {
+				m.On("Execute", mock.Anything, 1, 101).Return(nil, errors.New("invalid limit"))
+			},
 			expectedStatus: http.StatusBadRequest,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			expectedBody: gin.H{
+				"error": gin.H{
 					"code":    "INVALID_LIMIT",
 					"message": "リミットは1から100の間の整数である必要があります",
 				},
 			},
 		},
 		{
-			name:           "サーバーエラーの場合は500エラーを返す",
-			queryParams:    "?page=1&limit=10",
-			mockResponse:   nil,
-			mockError:      errors.New("database error"),
+			name:  "異常系: サーバーエラー",
+			query: "page=1&limit=10",
+			mockSetup: func(m *GetCompaniesMockUseCase) {
+				m.On("Execute", mock.Anything, 1, 10).Return(nil, errors.New("server error"))
+			},
 			expectedStatus: http.StatusInternalServerError,
-			expectedBody: map[string]interface{}{
-				"error": map[string]interface{}{
+			expectedBody: gin.H{
+				"error": gin.H{
 					"code":    "SERVER_ERROR",
 					"message": "サーバーエラーが発生しました",
 				},
@@ -151,69 +134,43 @@ func TestGetCompanies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Ginのテストモードを設定
-			gin.SetMode(gin.TestMode)
+			// モックの設定
+			mockUC := new(GetCompaniesMockUseCase)
+			tt.mockSetup(mockUC)
 
-			// モックユースケースの作成
-			mockUseCase := new(MockCompanyUseCase)
+			// ハンドラーの作成
+			handler := NewGetCompaniesHandler(mockUC)
 
-			// 正常なパラメータの場合のみモックの振る舞いを設定
-			if tt.mockResponse != nil || tt.mockError != nil {
-				mockUseCase.On("GetCompanies", mock.Anything, 1, 10).
-					Return(tt.mockResponse, tt.mockError)
-			}
+			// テスト用のGinコンテキストの作成
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest("GET", "/api/v1/companies?"+tt.query, nil)
 
-			// テスト用のルーターを作成
-			router := gin.New()
-			router.GET("/api/v1/companies", GetCompanies(mockUseCase))
+			// ハンドラーの実行
+			handler.Handle(c)
 
-			// テストリクエストを作成
-			req := httptest.NewRequest(http.MethodGet, "/api/v1/companies"+tt.queryParams, nil)
-			rec := httptest.NewRecorder()
+			// アサーション
+			assert.Equal(t, tt.expectedStatus, w.Code)
 
-			// リクエストを実行
-			router.ServeHTTP(rec, req)
-
-			// レスポンスを検証
-			assert.Equal(t, tt.expectedStatus, rec.Code)
-
-			// JSONレスポンスをパース
-			var response map[string]interface{}
-			err := json.Unmarshal(rec.Body.Bytes(), &response)
-			assert.NoError(t, err)
-
-			// 日付フィールドは動的に生成されるため、テスト対象から除外
-			if companies, ok := response["companies"].([]interface{}); ok {
-				for _, company := range companies {
-					if c, ok := company.(map[string]interface{}); ok {
-						delete(c, "created_at")
-						delete(c, "updated_at")
-					}
-				}
-			}
-
-			// 期待されるレスポンスボディを検証
-			if tt.expectedBody != nil {
-				// 日付フィールドは動的に生成されるため、期待値からも削除
-				if companies, ok := tt.expectedBody["companies"].([]interface{}); ok {
-					for _, company := range companies {
-						if c, ok := company.(map[string]interface{}); ok {
-							delete(c, "created_at")
-							delete(c, "updated_at")
-						}
-					}
-				}
-
+			if tt.expectedStatus == http.StatusOK {
+				var response entity.CompanyResponse
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedBody.(*entity.CompanyResponse), &response)
+			} else {
+				var response gin.H
+				err := json.Unmarshal(w.Body.Bytes(), &response)
+				assert.NoError(t, err)
 				assert.Equal(t, tt.expectedBody, response)
 			}
 
-			// モックが期待通り呼ばれたことを検証
-			mockUseCase.AssertExpectations(t)
+			// モックの検証
+			mockUC.AssertExpectations(t)
 		})
 	}
 }
 
-// stringPtr は文字列のポインタを返すヘルパー関数
+// stringPtr は文字列のポインタを返すヘルパー関数です
 func stringPtr(s string) *string {
 	return &s
 }

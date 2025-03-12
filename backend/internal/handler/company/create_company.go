@@ -1,94 +1,110 @@
 package company
 
 import (
+	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
 	"github.com/takanoakira/ai-interview-practice/backend/internal/usecase/company"
 )
 
-// CreateCompanyHandler は新しい企業情報を作成するハンドラーです
-type CreateCompanyHandler struct {
-	Usecase company.CompanyUseCase
+// CreateCompanyRequest は企業情報作成のリクエストを表す構造体です
+type CreateCompanyRequest struct {
+	Name                string               `json:"name" binding:"required"`
+	BusinessDescription *string              `json:"business_description"`
+	CustomFields        []CompanyCustomField `json:"custom_fields"`
 }
 
-// NewCreateCompanyHandler は新しいCreateCompanyHandlerインスタンスを作成します
-func NewCreateCompanyHandler(usecase company.CompanyUseCase) *CreateCompanyHandler {
-	return &CreateCompanyHandler{Usecase: usecase}
+// CompanyCustomField は企業の追加情報を表す構造体です
+type CompanyCustomField struct {
+	FieldName string `json:"field_name" binding:"required"`
+	Content   string `json:"content" binding:"required"`
 }
 
-// Handle は企業情報作成リクエストを処理します
-func (h *CreateCompanyHandler) Handle(c *gin.Context) {
-	var company entity.Company
-
-	// リクエストボディをバインド
-	if err := c.ShouldBindJSON(&company); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": gin.H{
-				"code":    "INVALID_REQUEST",
-				"message": "リクエストの形式が正しくありません",
-			},
-		})
-		return
+// Validate はリクエストのバリデーションを行います
+func (r *CreateCompanyRequest) Validate() error {
+	if r.Name == "" {
+		return errors.New("company name is required")
 	}
-
-	// バリデーション
-	if company.Name == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": gin.H{
-				"code":    "VALIDATION_ERROR",
-				"message": "バリデーションエラーが発生しました",
-				"details": []gin.H{
-					{
-						"field":   "name",
-						"message": "企業名は必須です",
-					},
-				},
-			},
-		})
-		return
-	}
-
-	// カスタムフィールドのバリデーション
-	for i, field := range company.CustomFields {
+	for _, field := range r.CustomFields {
 		if field.FieldName == "" {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": gin.H{
-					"code":    "VALIDATION_ERROR",
-					"message": "バリデーションエラーが発生しました",
-					"details": []gin.H{
-						{
-							"field":   "custom_fields[" + strconv.Itoa(i) + "].field_name",
-							"message": "項目名は必須です",
-						},
-					},
-				},
-			})
-			return
+			return errors.New("field name is required for custom fields")
+		}
+	}
+	return nil
+}
+
+// CreateCompanyHandler は企業情報作成のハンドラーです
+type CreateCompanyHandler struct {
+	usecase company.CreateCompanyUsecase
+}
+
+// NewCreateCompanyHandler は新しいCreateCompanyHandlerを作成します
+func NewCreateCompanyHandler(usecase company.CreateCompanyUsecase) *CreateCompanyHandler {
+	return &CreateCompanyHandler{
+		usecase: usecase,
+	}
+}
+
+// Handle は企業情報作成のリクエストを処理します
+func (h *CreateCompanyHandler) Handle(c *gin.Context) {
+	var req CreateCompanyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"message": "Invalid request format",
+				"detail":  err.Error(),
+			},
+		})
+		return
+	}
+
+	if err := req.Validate(); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"message": "Validation failed",
+				"detail":  err.Error(),
+			},
+		})
+		return
+	}
+
+	company := &entity.Company{
+		Name:                req.Name,
+		BusinessDescription: req.BusinessDescription,
+		CustomFields:        make([]entity.CompanyCustomField, len(req.CustomFields)),
+	}
+
+	for i, field := range req.CustomFields {
+		company.CustomFields[i] = entity.CompanyCustomField{
+			FieldName: field.FieldName,
+			Content:   field.Content,
 		}
 	}
 
-	// ユースケースを呼び出し
-	if err := h.Usecase.CreateCompany(c.Request.Context(), &company); err != nil {
+	if err := h.usecase.Execute(c.Request.Context(), company); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
-				"code":    "SERVER_ERROR",
-				"message": "サーバーエラーが発生しました",
+				"message": "Failed to create company",
+				"detail":  err.Error(),
 			},
 		})
 		return
 	}
 
-	// 成功レスポンスを返す
-	c.JSON(http.StatusCreated, company)
+	c.JSON(http.StatusCreated, gin.H{
+		"message": "Company created successfully",
+		"data": gin.H{
+			"company": company,
+		},
+	})
 }
 
 // CreateCompany は新しい企業情報を作成するハンドラー関数を返します
 // 後方互換性のために残しています
-func CreateCompany(companyUseCase company.CompanyUseCase) gin.HandlerFunc {
-	handler := NewCreateCompanyHandler(companyUseCase)
+func CreateCompany(createCompanyUC company.CreateCompanyUsecase) gin.HandlerFunc {
+	handler := NewCreateCompanyHandler(createCompanyUC)
 	return func(c *gin.Context) {
 		handler.Handle(c)
 	}
