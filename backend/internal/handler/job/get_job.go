@@ -8,46 +8,43 @@ import (
 	"github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job"
 )
 
-// GetJob は指定されたIDの求人情報を取得するハンドラーです
-func GetJob(jobUseCase job.JobUseCase) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// パスパラメータからIDを取得
-		idStr := c.Param("id")
-		id, err := strconv.Atoi(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": gin.H{
-					"code":    "INVALID_ID",
-					"message": "IDは整数である必要があります",
-				},
-			})
-			return
-		}
+// GetJobHandler は求人情報を取得するハンドラーです
+type GetJobHandler struct {
+	Usecase job.GetJobUsecase
+}
 
-		// ユースケースを呼び出し
-		job, err := jobUseCase.GetJobByID(c.Request.Context(), id)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": gin.H{
-					"code":    "SERVER_ERROR",
-					"message": "サーバーエラーが発生しました",
-				},
-			})
-			return
-		}
+// NewGetJobHandler は新しいGetJobHandlerインスタンスを作成します
+func NewGetJobHandler(usecase job.GetJobUsecase) *GetJobHandler {
+	return &GetJobHandler{Usecase: usecase}
+}
 
-		// 求人が見つからない場合
-		if job == nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": gin.H{
-					"code":    "JOB_NOT_FOUND",
-					"message": "指定されたIDの求人が見つかりません",
-				},
-			})
-			return
-		}
-
-		// 成功レスポンスを返す
-		c.JSON(http.StatusOK, job)
+// Handle は求人情報取得リクエストを処理します
+func (h *GetJobHandler) Handle(c *gin.Context) {
+	// パスパラメータからIDを取得
+	idStr := c.Param("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_ID",
+				"message": "IDは整数である必要があります",
+			},
+		})
+		return
 	}
+
+	// ユースケースを呼び出し
+	job, err := h.Usecase.Execute(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{
+			"error": gin.H{
+				"code":    "NOT_FOUND",
+				"message": "求人情報が見つかりませんでした",
+			},
+		})
+		return
+	}
+
+	// 成功レスポンスを返す
+	c.JSON(http.StatusOK, job)
 }

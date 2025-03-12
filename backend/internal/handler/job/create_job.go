@@ -9,86 +9,94 @@ import (
 	"github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job"
 )
 
-// CreateJob は新しい求人情報を作成するハンドラーです
-func CreateJob(jobUseCase job.JobUseCase) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// パスパラメータからIDを取得
-		idStr := c.Param("id")
-		companyID, err := strconv.Atoi(idStr)
-		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": gin.H{
-					"code":    "INVALID_ID",
-					"message": "IDは整数である必要があります",
+// CreateJobHandler は新しい求人情報を作成するハンドラーです
+type CreateJobHandler struct {
+	Usecase job.CreateJobUsecase
+}
+
+// NewCreateJobHandler は新しいCreateJobHandlerインスタンスを作成します
+func NewCreateJobHandler(usecase job.CreateJobUsecase) *CreateJobHandler {
+	return &CreateJobHandler{Usecase: usecase}
+}
+
+// Handle は求人情報作成リクエストを処理します
+func (h *CreateJobHandler) Handle(c *gin.Context) {
+	// パスパラメータからIDを取得
+	idStr := c.Param("id")
+	companyID, err := strconv.Atoi(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_ID",
+				"message": "IDは整数である必要があります",
+			},
+		})
+		return
+	}
+
+	var jobData entity.JobPosting
+
+	// リクエストボディをバインド
+	if err := c.ShouldBindJSON(&jobData); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_REQUEST",
+				"message": "リクエストの形式が正しくありません",
+			},
+		})
+		return
+	}
+
+	// 企業IDを設定
+	jobData.CompanyID = companyID
+
+	// バリデーション
+	if jobData.Title == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "VALIDATION_ERROR",
+				"message": "バリデーションエラーが発生しました",
+				"details": []gin.H{
+					{
+						"field":   "title",
+						"message": "求人タイトルは必須です",
+					},
 				},
-			})
-			return
-		}
+			},
+		})
+		return
+	}
 
-		var jobData entity.JobPosting
-
-		// リクエストボディをバインド
-		if err := c.ShouldBindJSON(&jobData); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"error": gin.H{
-					"code":    "INVALID_REQUEST",
-					"message": "リクエストの形式が正しくありません",
-				},
-			})
-			return
-		}
-
-		// 企業IDを設定
-		jobData.CompanyID = companyID
-
-		// バリデーション
-		if jobData.Title == "" {
+	// カスタムフィールドのバリデーション
+	for i, field := range jobData.CustomFields {
+		if field.FieldName == "" {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": gin.H{
 					"code":    "VALIDATION_ERROR",
 					"message": "バリデーションエラーが発生しました",
 					"details": []gin.H{
 						{
-							"field":   "title",
-							"message": "求人タイトルは必須です",
+							"field":   "custom_fields[" + strconv.Itoa(i) + "].field_name",
+							"message": "項目名は必須です",
 						},
 					},
 				},
 			})
 			return
 		}
-
-		// カスタムフィールドのバリデーション
-		for i, field := range jobData.CustomFields {
-			if field.FieldName == "" {
-				c.JSON(http.StatusBadRequest, gin.H{
-					"error": gin.H{
-						"code":    "VALIDATION_ERROR",
-						"message": "バリデーションエラーが発生しました",
-						"details": []gin.H{
-							{
-								"field":   "custom_fields[" + strconv.Itoa(i) + "].field_name",
-								"message": "項目名は必須です",
-							},
-						},
-					},
-				})
-				return
-			}
-		}
-
-		// ユースケースを呼び出し
-		if err := jobUseCase.CreateJob(c.Request.Context(), &jobData); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"error": gin.H{
-					"code":    "SERVER_ERROR",
-					"message": "サーバーエラーが発生しました",
-				},
-			})
-			return
-		}
-
-		// 成功レスポンスを返す
-		c.JSON(http.StatusCreated, jobData)
 	}
+
+	// ユースケースを呼び出し
+	if err := h.Usecase.Execute(c.Request.Context(), &jobData); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "SERVER_ERROR",
+				"message": "サーバーエラーが発生しました",
+			},
+		})
+		return
+	}
+
+	// 成功レスポンスを返す
+	c.JSON(http.StatusCreated, jobData)
 }

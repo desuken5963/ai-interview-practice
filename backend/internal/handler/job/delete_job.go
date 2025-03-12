@@ -8,12 +8,67 @@ import (
 	"github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job"
 )
 
-// DeleteJob は求人情報を削除するハンドラーです
-func DeleteJob(jobUseCase job.JobUseCase) gin.HandlerFunc {
+// DeleteJobHandler は求人情報を削除するハンドラーです
+type DeleteJobHandler struct {
+	Usecase job.DeleteJobUsecase
+}
+
+// NewDeleteJobHandler は新しいDeleteJobHandlerインスタンスを作成します
+func NewDeleteJobHandler(usecase job.DeleteJobUsecase) *DeleteJobHandler {
+	return &DeleteJobHandler{Usecase: usecase}
+}
+
+// Handle は求人情報削除リクエストを処理します
+func (h *DeleteJobHandler) Handle(c *gin.Context) {
+	// パスパラメータからIDを取得
+	companyIDStr := c.Param("id")
+	_, err := strconv.Atoi(companyIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_ID",
+				"message": "企業IDは整数である必要があります",
+			},
+		})
+		return
+	}
+
+	jobIDStr := c.Param("job_id")
+	jobID, err := strconv.Atoi(jobIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": gin.H{
+				"code":    "INVALID_ID",
+				"message": "求人IDは整数である必要があります",
+			},
+		})
+		return
+	}
+
+	// ユースケースを呼び出し
+	if err := h.Usecase.Execute(c.Request.Context(), jobID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": gin.H{
+				"code":    "SERVER_ERROR",
+				"message": "サーバーエラーが発生しました",
+			},
+		})
+		return
+	}
+
+	// 成功レスポンスを返す
+	c.JSON(http.StatusOK, gin.H{
+		"message": "求人情報が正常に削除されました",
+	})
+}
+
+// DeleteJob は求人情報を削除するハンドラー関数を返します
+// 後方互換性のために残しています
+func DeleteJob(usecase job.DeleteJobUsecase) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		// パスパラメータから企業IDを取得
+		// パスパラメータからIDを取得
 		companyIDStr := c.Param("id")
-		companyID, err := strconv.Atoi(companyIDStr)
+		_, err := strconv.Atoi(companyIDStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": gin.H{
@@ -24,7 +79,6 @@ func DeleteJob(jobUseCase job.JobUseCase) gin.HandlerFunc {
 			return
 		}
 
-		// パスパラメータから求人IDを取得
 		jobIDStr := c.Param("job_id")
 		jobID, err := strconv.Atoi(jobIDStr)
 		if err != nil {
@@ -37,30 +91,8 @@ func DeleteJob(jobUseCase job.JobUseCase) gin.HandlerFunc {
 			return
 		}
 
-		// 求人が指定された企業に属しているか確認
-		job, err := jobUseCase.GetJobByID(c.Request.Context(), jobID)
-		if err != nil {
-			c.JSON(http.StatusNotFound, gin.H{
-				"error": gin.H{
-					"code":    "NOT_FOUND",
-					"message": "求人情報が見つかりません",
-				},
-			})
-			return
-		}
-
-		if job.CompanyID != companyID {
-			c.JSON(http.StatusForbidden, gin.H{
-				"error": gin.H{
-					"code":    "FORBIDDEN",
-					"message": "この企業の求人ではありません",
-				},
-			})
-			return
-		}
-
 		// ユースケースを呼び出し
-		if err := jobUseCase.DeleteJob(c.Request.Context(), jobID); err != nil {
+		if err := usecase.Execute(c.Request.Context(), jobID); err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": gin.H{
 					"code":    "SERVER_ERROR",
@@ -72,7 +104,7 @@ func DeleteJob(jobUseCase job.JobUseCase) gin.HandlerFunc {
 
 		// 成功レスポンスを返す
 		c.JSON(http.StatusOK, gin.H{
-			"message": "求人情報を削除しました",
+			"message": "求人情報が正常に削除されました",
 		})
 	}
 }
