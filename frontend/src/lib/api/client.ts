@@ -74,28 +74,31 @@ export const jobAPI = {
   // 求人一覧を取得（企業IDが指定されている場合は企業に紐づく求人一覧を取得）
   getJobs: (companyId?: number) => {
     const endpoint = companyId 
-      ? `/api/v1/companies/${companyId}/jobs` 
-      : '/api/v1/jobs';
+      ? `/api/v1/companies/${companyId}/job-postings` 
+      : '/api/v1/job-postings';
     return fetchAPI<JobResponse>(endpoint);
   },
   
   // 求人詳細を取得
-  getJob: (id: number) => fetchAPI<Job>(`/api/v1/jobs/${id}`),
+  getJob: (id: number) => fetchAPI<Job>(`/api/v1/job-postings/${id}`),
   
   // 求人を作成
-  createJob: (companyId: number, data: JobInput) => fetchAPI<Job>(`/api/v1/companies/${companyId}/jobs`, {
+  createJob: (companyId: number, data: JobInput) => fetchAPI<Job>(`/api/v1/companies/${companyId}/job-postings`, {
     method: 'POST',
     body: JSON.stringify(data),
   }),
   
   // 求人を更新
-  updateJob: (companyId: number, jobId: number, data: JobInput) => fetchAPI<Job>(`/api/v1/companies/${companyId}/jobs/${jobId}`, {
+  updateJob: (id: number, data: JobInput) => fetchAPI<Job>(`/api/v1/job-postings/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
   
   // 求人を削除
-  deleteJob: (companyId: number, jobId: number) => fetchAPI<void>(`/api/v1/companies/${companyId}/jobs/${jobId}`, {
+  deleteJob: (id: number) => fetchAPI<void>(`/api/v1/job-postings/${id}`, {
     method: 'DELETE',
   }),
+
+  // 企業と紐づく求人一覧を一括取得
+  getCompanyWithJobs: (companyId: number) => fetchAPI<Company>(`/api/v1/companies/${companyId}/with-job-postings`),
 }; 
