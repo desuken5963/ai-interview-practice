@@ -8,10 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	companyRepo "github.com/takanoakira/ai-interview-practice/backend/internal/repository/company"
-	jobRepo "github.com/takanoakira/ai-interview-practice/backend/internal/repository/job"
+	jobRepo "github.com/takanoakira/ai-interview-practice/backend/internal/repository/job_posting"
 	"github.com/takanoakira/ai-interview-practice/backend/internal/routes"
 	companyUsecase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/company"
-	jobUsecase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job"
+	jobUsecase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job_posting"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -42,37 +42,19 @@ func main() {
 	}
 
 	// リポジトリの初期化
-	// 企業関連のリポジトリ
-	getCompaniesRepo := companyRepo.NewGetCompaniesRepository(db)
-	getCompanyRepo := companyRepo.NewGetCompanyRepository(db)
-	createCompanyRepo := companyRepo.NewCreateCompanyRepository(db)
-	updateCompanyRepo := companyRepo.NewUpdateCompanyRepository(db)
-	deleteCompanyRepo := companyRepo.NewDeleteCompanyRepository(db)
-
-	// 求人関連のリポジトリ
-	getJobsRepo := jobRepo.NewGetJobsRepository(db)
-	getJobRepo := jobRepo.NewGetJobRepository(db)
-	createJobRepo := jobRepo.NewCreateJobRepository(db)
-	updateJobRepo := jobRepo.NewUpdateJobRepository(db)
-	deleteJobRepo := jobRepo.NewDeleteJobRepository(db)
-	getJobsByCompanyRepo := jobRepo.NewGetJobsByCompanyRepository(db)
+	companyRepository := companyRepo.NewCompanyRepository(db)
+	jobPostingRepository := jobRepo.NewJobPostingRepository(db)
 
 	// ユースケースの初期化
 	// 企業関連のユースケース
-	getCompaniesUC := companyUsecase.NewGetCompaniesUsecase(getCompaniesRepo)
-	getCompanyUC := companyUsecase.NewGetCompanyUsecase(getCompanyRepo)
-	createCompanyUC := companyUsecase.NewCreateCompanyUsecase(createCompanyRepo)
-	updateCompanyUC := companyUsecase.NewUpdateCompanyUsecase(updateCompanyRepo)
-	deleteCompanyUC := companyUsecase.NewDeleteCompanyUsecase(deleteCompanyRepo)
+	getCompaniesUC := companyUsecase.NewGetCompaniesUsecase(companyRepository)
+	getCompanyUC := companyUsecase.NewGetCompanyUsecase(companyRepository)
+	createCompanyUC := companyUsecase.NewCreateCompanyUsecase(companyRepository)
+	updateCompanyUC := companyUsecase.NewUpdateCompanyUsecase(companyRepository)
+	deleteCompanyUC := companyUsecase.NewDeleteCompanyUsecase(companyRepository)
 
 	// 求人関連のユースケース
-	getJobsUC := jobUsecase.NewGetJobsUsecase(getJobsRepo)
-	getJobUC := jobUsecase.NewGetJobUsecase(getJobRepo)
-	createJobUC := jobUsecase.NewCreateJobUsecase(createJobRepo)
-	updateJobUC := jobUsecase.NewUpdateJobUsecase(updateJobRepo)
-	deleteJobUC := jobUsecase.NewDeleteJobUsecase(deleteJobRepo)
-	getJobsByCompanyIDUC := jobUsecase.NewGetJobsByCompanyIDUsecase(getJobsByCompanyRepo)
-	getCompanyWithJobsUC := jobUsecase.NewGetCompanyWithJobsUsecase(getJobsByCompanyRepo, getCompanyRepo)
+	jobPostingUC := jobUsecase.NewJobPostingUsecase(jobPostingRepository)
 
 	// ルーターの設定
 	router := gin.Default()
@@ -102,13 +84,7 @@ func main() {
 	// 求人ハンドラーの登録
 	routes.RegisterJobRoutes(
 		router,
-		createJobUC,
-		getJobUC,
-		updateJobUC,
-		deleteJobUC,
-		getJobsUC,
-		getJobsByCompanyIDUC,
-		getCompanyWithJobsUC,
+		jobPostingUC,
 	)
 
 	// サーバーの起動
