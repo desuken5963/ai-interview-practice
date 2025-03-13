@@ -8,7 +8,7 @@ type Company struct {
 	Name                string               `json:"name" gorm:"not null"`
 	BusinessDescription *string              `json:"business_description" gorm:"type:text"`
 	CustomFields        []CompanyCustomField `json:"custom_fields" gorm:"foreignKey:CompanyID"`
-	JobCount            int                  `json:"job_count" gorm:"-"` // DBには保存されない計算フィールド
+	JobCount            int                  `json:"job_count" gorm:"column:job_count"` // SQLのカラム名とマッピング
 	CreatedAt           time.Time            `json:"created_at" gorm:"not null;default:CURRENT_TIMESTAMP"`
 	UpdatedAt           time.Time            `json:"updated_at" gorm:"not null;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`
 }

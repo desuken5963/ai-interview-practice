@@ -95,7 +95,7 @@ export default function CompanyCard({ company, onEdit, onDelete, onRefresh }: Co
     try {
       setLoading(true);
       // 求人削除APIを呼び出す
-      await jobAPI.deleteJob(company.id, jobId);
+      await jobAPI.deleteJob(jobId);
       
       // 最新の求人データを取得
       await fetchJobs();
@@ -120,7 +120,7 @@ export default function CompanyCard({ company, onEdit, onDelete, onRefresh }: Co
       setLoading(true);
       if (selectedJob) {
         // 編集の場合
-        await jobAPI.updateJob(company.id, selectedJob.id, data);
+        await jobAPI.updateJob(selectedJob.id, data);
       } else {
         // 新規登録の場合
         await jobAPI.createJob(company.id, data);

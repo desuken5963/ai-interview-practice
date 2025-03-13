@@ -51,8 +51,9 @@ type CompanyCustomField struct {
 
 // UpdateCompanyRequest は企業情報更新のリクエストを表す構造体です
 type UpdateCompanyRequest struct {
-	Name        string `json:"name" binding:"required"`
-	Description string `json:"description"`
+	Name                string               `json:"name" binding:"required"`
+	BusinessDescription *string              `json:"business_description"`
+	CustomFields        []CompanyCustomField `json:"custom_fields"`
 }
 
 // Validate はCreateCompanyRequestのバリデーションを行います
@@ -215,8 +216,9 @@ func (h *CompanyHandler) Update(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": gin.H{
-				"message": "Invalid company ID",
+				"message": "無効な企業IDです",
 				"detail":  err.Error(),
+				"code":    "INVALID_ID",
 			},
 		})
 		return
@@ -226,8 +228,9 @@ func (h *CompanyHandler) Update(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": gin.H{
-				"message": "Invalid request format",
+				"message": "リクエストの形式が正しくありません",
 				"detail":  err.Error(),
+				"code":    "INVALID_REQUEST",
 			},
 		})
 		return
@@ -236,8 +239,9 @@ func (h *CompanyHandler) Update(c *gin.Context) {
 	if err := req.Validate(); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": gin.H{
-				"message": "Validation failed",
+				"message": "バリデーションに失敗しました",
 				"detail":  err.Error(),
+				"code":    "VALIDATION_FAILED",
 			},
 		})
 		return
@@ -246,25 +250,29 @@ func (h *CompanyHandler) Update(c *gin.Context) {
 	company := &entity.Company{
 		ID:                  id,
 		Name:                req.Name,
-		BusinessDescription: &req.Description,
+		BusinessDescription: req.BusinessDescription,
+		CustomFields:        make([]entity.CompanyCustomField, len(req.CustomFields)),
+	}
+
+	for i, field := range req.CustomFields {
+		company.CustomFields[i] = entity.CompanyCustomField{
+			FieldName: field.FieldName,
+			Content:   field.Content,
+		}
 	}
 
 	if err := h.updateUsecase.Execute(c.Request.Context(), company); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": gin.H{
-				"message": "Failed to update company",
+				"message": "企業情報の更新に失敗しました",
 				"detail":  err.Error(),
+				"code":    "UPDATE_FAILED",
 			},
 		})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Company updated successfully",
-		"data": gin.H{
-			"company": company,
-		},
-	})
+	c.JSON(http.StatusOK, company)
 }
 
 // Delete は指定されたIDの企業情報を削除します

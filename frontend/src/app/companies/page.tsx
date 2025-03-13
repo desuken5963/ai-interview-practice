@@ -75,9 +75,25 @@ export default function CompaniesPage() {
     try {
       setLoading(true);
       const updatedCompany = await companyAPI.updateCompany(companyId, data);
-      setCompanies(prev => prev.map(company => 
-        company.id === companyId ? updatedCompany : company
-      ));
+      
+      // 更新データの整合性チェック
+      if (!updatedCompany || !updatedCompany.id) {
+        throw new Error('更新後のデータが不正です');
+      }
+      
+      // バッチ更新を使用して、ステートの整合性を保証
+      setCompanies(prev => {
+        const newCompanies = [...prev];
+        const index = newCompanies.findIndex(c => c.id === companyId);
+        if (index !== -1) {
+          newCompanies[index] = {
+            ...newCompanies[index],
+            ...updatedCompany,
+            id: companyId  // IDを明示的に保持
+          };
+        }
+        return newCompanies;
+      });
     } catch (error) {
       console.error('Error updating company:', error);
       setError('企業情報の更新に失敗しました。');
@@ -91,6 +107,7 @@ export default function CompaniesPage() {
     try {
       setLoading(true);
       await companyAPI.deleteCompany(companyId);
+      // 削除後は配列から該当企業を削除
       setCompanies(prev => prev.filter(company => company.id !== companyId));
     } catch (error) {
       console.error('Error deleting company:', error);
@@ -105,9 +122,25 @@ export default function CompaniesPage() {
     try {
       setLoading(true);
       const updatedCompany = await companyAPI.getCompany(companyId);
-      setCompanies(prev => prev.map(company => 
-        company.id === companyId ? updatedCompany : company
-      ));
+      
+      // 更新データの整合性チェック
+      if (!updatedCompany || !updatedCompany.id) {
+        throw new Error('更新後のデータが不正です');
+      }
+      
+      // バッチ更新を使用して、ステートの整合性を保証
+      setCompanies(prev => {
+        const newCompanies = [...prev];
+        const index = newCompanies.findIndex(c => c.id === companyId);
+        if (index !== -1) {
+          newCompanies[index] = {
+            ...newCompanies[index],
+            ...updatedCompany,
+            id: companyId  // IDを明示的に保持
+          };
+        }
+        return newCompanies;
+      });
     } catch (error) {
       console.error('Error refreshing company:', error);
       setError('企業情報の更新に失敗しました。');
@@ -152,14 +185,22 @@ export default function CompaniesPage() {
 
       {/* エラーメッセージ */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-          <button 
-            className="float-right font-bold"
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4">
+          <span className="block sm:inline">{error}</span>
+          <span
+            className="absolute top-0 bottom-0 right-0 px-4 py-3 cursor-pointer"
             onClick={() => setError(null)}
           >
-            ×
-          </button>
+            <svg
+              className="fill-current h-6 w-6 text-red-500"
+              role="button"
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+            >
+              <title>Close</title>
+              <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z" />
+            </svg>
+          </span>
         </div>
       )}
 
@@ -174,15 +215,23 @@ export default function CompaniesPage() {
       {/* 企業一覧 */}
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {companies.map((company) => (
-            <CompanyCard
-              key={company.id}
-              company={company}
-              onEdit={handleUpdate}
-              onDelete={() => handleDelete(company.id)}
-              onRefresh={handleRefreshCompany}
-            />
-          ))}
+          {companies.map((company) => {
+            // IDの存在確認
+            if (!company?.id) {
+              console.warn('Company without ID:', company);
+              return null;
+            }
+            
+            return (
+              <CompanyCard
+                key={company.id}
+                company={company}
+                onEdit={handleUpdate}
+                onDelete={() => handleDelete(company.id)}
+                onRefresh={handleRefreshCompany}
+              />
+            );
+          })}
         </div>
       )}
 
