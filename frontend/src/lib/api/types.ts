@@ -45,7 +45,7 @@ export type JobPosting = {
 
 // 求人一覧のレスポンス型
 export type JobPostingResponse = {
-  job_postings: JobPosting[];
+  jobPostings: JobPosting[];
   total: number;
   page: number;
   limit: number;

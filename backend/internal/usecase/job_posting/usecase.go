@@ -70,10 +70,10 @@ func (u *jobPostingUsecase) ListByCompanyID(ctx context.Context, companyID, offs
 	}
 
 	response := &entity.JobResponse{
-		Jobs:  jobs,
-		Total: total,
-		Page:  page,
-		Limit: limit,
+		JobPostings: jobs,
+		Total:       total,
+		Page:        page,
+		Limit:       limit,
 	}
 
 	return response, nil

@@ -43,7 +43,7 @@ func TestJobAPI_E2E(t *testing.T) {
 	}
 
 	var companyID int
-	var jobID int
+	var jobPostingID int
 
 	// 1. 企業の作成をテスト
 	t.Run("CreateCompany", func(t *testing.T) {
@@ -73,9 +73,9 @@ func TestJobAPI_E2E(t *testing.T) {
 	})
 
 	// 2. 求人の作成をテスト
-	t.Run("CreateJob", func(t *testing.T) {
+	t.Run("CreateJobPosting", func(t *testing.T) {
 		// テスト用の求人データ
-		testJob := map[string]interface{}{
+		testJobPosting := map[string]interface{}{
 			"company_id":           companyID,
 			"title":                "E2Eテストエンジニア",
 			"description":          "E2Eテスト求人の説明",
@@ -90,11 +90,11 @@ func TestJobAPI_E2E(t *testing.T) {
 		}
 
 		// リクエストボディを作成
-		jsonData, err := json.Marshal(testJob)
+		jsonData, err := json.Marshal(testJobPosting)
 		require.NoError(t, err)
 
 		// POSTリクエストを作成
-		req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs", bytes.NewBuffer(jsonData))
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/job-postings", bytes.NewBuffer(jsonData))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 
@@ -110,14 +110,14 @@ func TestJobAPI_E2E(t *testing.T) {
 		assert.NoError(t, err)
 
 		// 求人IDを取得
-		jobID = int(response["id"].(float64))
-		assert.NotZero(t, jobID)
+		jobPostingID = int(response["id"].(float64))
+		assert.NotZero(t, jobPostingID)
 	})
 
 	// 3. 求人の取得をテスト
-	t.Run("GetJob", func(t *testing.T) {
+	t.Run("GetJobPosting", func(t *testing.T) {
 		// GETリクエストを作成
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/jobs/%d", jobID), nil)
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/job-postings/%d", jobPostingID), nil)
 		rec := httptest.NewRecorder()
 
 		// リクエストを実行
@@ -127,29 +127,29 @@ func TestJobAPI_E2E(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		// レスポンスボディをパース
-		var job map[string]interface{}
-		err := json.Unmarshal(rec.Body.Bytes(), &job)
+		var jobPosting map[string]interface{}
+		err := json.Unmarshal(rec.Body.Bytes(), &jobPosting)
 		assert.NoError(t, err)
 
 		// 求人データを検証
-		assert.Equal(t, float64(jobID), job["id"])
-		assert.Equal(t, float64(companyID), job["company_id"])
-		assert.Equal(t, "E2Eテストエンジニア", job["title"])
-		assert.Equal(t, "E2Eテスト求人の説明", job["description"])
-		assert.Equal(t, "東京", job["location"])
-		assert.Equal(t, "年収500万円〜800万円", job["salary"])
-		assert.Equal(t, "正社員", job["employment_type"])
-		assert.Equal(t, "公開中", job["status"])
-		assert.Equal(t, "Go, Docker, MySQL", job["required_skills"])
-		assert.Equal(t, "Kubernetes, AWS", job["preferred_skills"])
-		assert.Equal(t, float64(3), job["experience"])
+		assert.Equal(t, float64(jobPostingID), jobPosting["id"])
+		assert.Equal(t, float64(companyID), jobPosting["company_id"])
+		assert.Equal(t, "E2Eテストエンジニア", jobPosting["title"])
+		assert.Equal(t, "E2Eテスト求人の説明", jobPosting["description"])
+		assert.Equal(t, "東京", jobPosting["location"])
+		assert.Equal(t, "年収500万円〜800万円", jobPosting["salary"])
+		assert.Equal(t, "正社員", jobPosting["employment_type"])
+		assert.Equal(t, "公開中", jobPosting["status"])
+		assert.Equal(t, "Go, Docker, MySQL", jobPosting["required_skills"])
+		assert.Equal(t, "Kubernetes, AWS", jobPosting["preferred_skills"])
+		assert.Equal(t, float64(3), jobPosting["experience"])
 	})
 
 	// 4. 求人一覧の取得をテスト
-	t.Run("GetJobs", func(t *testing.T) {
+	t.Run("GetJobPostings", func(t *testing.T) {
 		// 追加の求人を作成
 		for i := 0; i < 3; i++ {
-			additionalJob := map[string]interface{}{
+			additionalJobPosting := map[string]interface{}{
 				"company_id":           companyID,
 				"title":                fmt.Sprintf("追加E2Eテスト求人 %d", i+1),
 				"description":          fmt.Sprintf("追加E2Eテスト求人 %d の説明", i+1),
@@ -160,10 +160,10 @@ func TestJobAPI_E2E(t *testing.T) {
 				"status":               "公開中",
 			}
 
-			jsonData, err := json.Marshal(additionalJob)
+			jsonData, err := json.Marshal(additionalJobPosting)
 			require.NoError(t, err)
 
-			req := httptest.NewRequest(http.MethodPost, "/api/v1/jobs", bytes.NewBuffer(jsonData))
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/job-postings", bytes.NewBuffer(jsonData))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 
@@ -172,7 +172,7 @@ func TestJobAPI_E2E(t *testing.T) {
 		}
 
 		// GETリクエストを作成
-		req := httptest.NewRequest(http.MethodGet, "/api/v1/jobs?page=1&limit=10", nil)
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/job-postings?page=1&limit=10", nil)
 		rec := httptest.NewRecorder()
 
 		// リクエストを実行
@@ -187,17 +187,17 @@ func TestJobAPI_E2E(t *testing.T) {
 		assert.NoError(t, err)
 
 		// 求人一覧を検証
-		jobs := response["jobs"].([]interface{})
-		assert.Equal(t, 4, len(jobs)) // 元の1つ + 追加の3つ
+		jobPostings := response["jobPostings"].([]interface{})
+		assert.Equal(t, 4, len(jobPostings)) // 元の1つ + 追加の3つ
 		assert.Equal(t, float64(4), response["total"])
 		assert.Equal(t, float64(1), response["page"])
 		assert.Equal(t, float64(10), response["limit"])
 	})
 
 	// 5. 企業IDによる求人一覧の取得をテスト
-	t.Run("GetJobsByCompanyID", func(t *testing.T) {
+	t.Run("GetJobPostingsByCompanyID", func(t *testing.T) {
 		// GETリクエストを作成
-		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/companies/%d/jobs?page=1&limit=10", companyID), nil)
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/companies/%d/job-postings?page=1&limit=10", companyID), nil)
 		rec := httptest.NewRecorder()
 
 		// リクエストを実行
@@ -212,21 +212,21 @@ func TestJobAPI_E2E(t *testing.T) {
 		assert.NoError(t, err)
 
 		// 求人一覧を検証
-		jobs := response["jobs"].([]interface{})
-		assert.Equal(t, 4, len(jobs)) // 元の1つ + 追加の3つ
+		jobPostings := response["jobPostings"].([]interface{})
+		assert.Equal(t, 4, len(jobPostings)) // 元の1つ + 追加の3つ
 		assert.Equal(t, float64(4), response["total"])
 		assert.Equal(t, float64(1), response["page"])
 		assert.Equal(t, float64(10), response["limit"])
 
 		// すべての求人が同じ企業IDであることを確認
-		for _, job := range jobs {
-			jobMap := job.(map[string]interface{})
-			assert.Equal(t, float64(companyID), jobMap["company_id"])
+		for _, jobPosting := range jobPostings {
+			jobPostingMap := jobPosting.(map[string]interface{})
+			assert.Equal(t, float64(companyID), jobPostingMap["company_id"])
 		}
 	})
 
 	// 6. 求人の更新をテスト
-	t.Run("UpdateJob", func(t *testing.T) {
+	t.Run("UpdateJobPosting", func(t *testing.T) {
 		// 更新用のデータ
 		updateData := map[string]interface{}{
 			"company_id":           companyID,
@@ -247,7 +247,7 @@ func TestJobAPI_E2E(t *testing.T) {
 		require.NoError(t, err)
 
 		// PUTリクエストを作成
-		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/v1/jobs/%d", jobID), bytes.NewBuffer(jsonData))
+		req := httptest.NewRequest(http.MethodPut, fmt.Sprintf("/api/v1/job-postings/%d", jobPostingID), bytes.NewBuffer(jsonData))
 		req.Header.Set("Content-Type", "application/json")
 		rec := httptest.NewRecorder()
 
@@ -258,30 +258,30 @@ func TestJobAPI_E2E(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rec.Code)
 
 		// 更新後のデータを取得して検証
-		req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/jobs/%d", jobID), nil)
+		req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/job-postings/%d", jobPostingID), nil)
 		rec = httptest.NewRecorder()
 
 		router.ServeHTTP(rec, req)
 
 		assert.Equal(t, http.StatusOK, rec.Code)
 
-		var updatedJob map[string]interface{}
-		err = json.Unmarshal(rec.Body.Bytes(), &updatedJob)
+		var updatedJobPosting map[string]interface{}
+		err = json.Unmarshal(rec.Body.Bytes(), &updatedJobPosting)
 		assert.NoError(t, err)
 
-		assert.Equal(t, updateData["title"], updatedJob["title"])
-		assert.Equal(t, updateData["description"], updatedJob["description"])
-		assert.Equal(t, updateData["location"], updatedJob["location"])
-		assert.Equal(t, updateData["salary"], updatedJob["salary"])
-		assert.Equal(t, updateData["required_skills"], updatedJob["required_skills"])
-		assert.Equal(t, updateData["preferred_skills"], updatedJob["preferred_skills"])
-		assert.Equal(t, updateData["experience"], updatedJob["experience"])
+		assert.Equal(t, updateData["title"], updatedJobPosting["title"])
+		assert.Equal(t, updateData["description"], updatedJobPosting["description"])
+		assert.Equal(t, updateData["location"], updatedJobPosting["location"])
+		assert.Equal(t, updateData["salary"], updatedJobPosting["salary"])
+		assert.Equal(t, updateData["required_skills"], updatedJobPosting["required_skills"])
+		assert.Equal(t, updateData["preferred_skills"], updatedJobPosting["preferred_skills"])
+		assert.Equal(t, updateData["experience"], updatedJobPosting["experience"])
 	})
 
 	// 7. 求人の削除をテスト
-	t.Run("DeleteJob", func(t *testing.T) {
+	t.Run("DeleteJobPosting", func(t *testing.T) {
 		// DELETEリクエストを作成
-		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/jobs/%d", jobID), nil)
+		req := httptest.NewRequest(http.MethodDelete, fmt.Sprintf("/api/v1/job-postings/%d", jobPostingID), nil)
 		rec := httptest.NewRecorder()
 
 		// リクエストを実行
@@ -291,7 +291,7 @@ func TestJobAPI_E2E(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, rec.Code)
 
 		// 削除後に取得を試みる
-		req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/jobs/%d", jobID), nil)
+		req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/api/v1/job-postings/%d", jobPostingID), nil)
 		rec = httptest.NewRecorder()
 
 		router.ServeHTTP(rec, req)

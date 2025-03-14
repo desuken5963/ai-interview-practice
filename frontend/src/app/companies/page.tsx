@@ -55,22 +55,16 @@ export default function CompaniesPage() {
 
       // 各企業の求人情報を取得
       const companiesWithJobPostings = [...response.companies];
-      for (const company of companiesWithJobPostings) {
+      for (let i = 0; i < companiesWithJobPostings.length; i++) {
+        const company = companiesWithJobPostings[i];
         if (company.id) {
           try {
             const jobResponse = await jobPostingAPI.getJobPostings(company.id);
             // 求人情報を保存
-            setCompanies(prev => {
-              return prev.map(c => {
-                if (c.id === company.id) {
-                  return {
-                    ...c,
-                    jobPostings: jobResponse.job_postings
-                  };
-                }
-                return c;
-              });
-            });
+            companiesWithJobPostings[i] = {
+              ...company,
+              jobPostings: jobResponse.jobPostings
+            };
           } catch (error) {
             console.error(`Error fetching job postings for company ${company.id}:`, error);
           }
@@ -192,16 +186,12 @@ export default function CompaniesPage() {
   // 求人一覧モーダルを開く
   const handleJobPostingListOpen = async (company: Company) => {
     try {
-      setLoading(true);
       setSelectedCompany(company);
       const response = await jobPostingAPI.getJobPostings(company.id);
-      setJobPostings(response.job_postings);
+      setJobPostings(response.jobPostings);
       setIsJobPostingListModalOpen(true);
     } catch (error) {
       console.error('Error fetching job postings:', error);
-      setError('求人情報の取得に失敗しました');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -234,7 +224,7 @@ export default function CompaniesPage() {
       // 求人一覧を更新
       if (selectedCompany) {
         const response = await jobPostingAPI.getJobPostings(selectedCompany.id);
-        setJobPostings(response.job_postings);
+        setJobPostings(response.jobPostings);
         
         // 企業情報も更新して求人数を反映
         await handleRefreshCompany(selectedCompany.id);
@@ -264,7 +254,7 @@ export default function CompaniesPage() {
       // 求人一覧を更新
       if (selectedCompany) {
         const response = await jobPostingAPI.getJobPostings(selectedCompany.id);
-        setJobPostings(response.job_postings);
+        setJobPostings(response.jobPostings);
         
         // 企業情報も更新して求人数を反映
         await handleRefreshCompany(selectedCompany.id);

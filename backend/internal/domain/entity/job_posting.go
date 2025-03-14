@@ -25,8 +25,8 @@ type JobCustomField struct {
 
 // JobResponse は求人一覧のレスポンスを表すエンティティです
 type JobResponse struct {
-	Jobs  []JobPosting `json:"jobs"`
-	Total int          `json:"total"`
-	Page  int          `json:"page"`
-	Limit int          `json:"limit"`
+	JobPostings []JobPosting `json:"jobPostings"`
+	Total       int          `json:"total"`
+	Page        int          `json:"page"`
+	Limit       int          `json:"limit"`
 }

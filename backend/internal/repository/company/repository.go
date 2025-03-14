@@ -159,8 +159,8 @@ func (r *companyRepository) Count(ctx context.Context) (int64, error) {
 func (r *companyRepository) FindWithJobs(ctx context.Context, id int) (*entity.Company, error) {
 	var company entity.Company
 	if err := r.db.WithContext(ctx).
-		Preload("Jobs").
-		Preload("Jobs.CustomFields").
+		Preload("JobPostings").
+		Preload("JobPostings.CustomFields").
 		First(&company, id).Error; err != nil {
 		return nil, err
 	}

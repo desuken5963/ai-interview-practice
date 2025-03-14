@@ -163,8 +163,8 @@ func (r *jobPostingRepository) CountByCompanyID(ctx context.Context, companyID i
 func (r *jobPostingRepository) FindWithJobs(ctx context.Context, companyID int) (*entity.Company, error) {
 	var company entity.Company
 	if err := r.db.WithContext(ctx).
-		Preload("Jobs").
-		Preload("Jobs.CustomFields").
+		Preload("JobPostings").
+		Preload("JobPostings.CustomFields").
 		First(&company, companyID).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			return nil, nil
