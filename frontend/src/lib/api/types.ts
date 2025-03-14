@@ -4,7 +4,8 @@ export type Company = {
   name: string;
   business_description: string | null;
   custom_fields: CustomField[];
-  job_count?: number;
+  job_count: number;
+  jobPostings?: JobPosting[];
   created_at: string;
   updated_at: string;
 };
@@ -31,7 +32,7 @@ export type CompanyListResponse = {
 };
 
 // 求人情報の型定義
-export type Job = {
+export type JobPosting = {
   id: number;
   company_id: number;
   title: string;
@@ -43,15 +44,15 @@ export type Job = {
 };
 
 // 求人一覧のレスポンス型
-export type JobResponse = {
-  jobs: Job[];
+export type JobPostingResponse = {
+  job_postings: JobPosting[];
   total: number;
   page: number;
   limit: number;
 };
 
 // 求人作成・更新用のデータ型
-export type JobInput = {
+export type JobPostingInput = {
   title: string;
   description: string | null;
   requirements: string | null;

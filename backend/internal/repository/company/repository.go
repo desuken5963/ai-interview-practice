@@ -58,12 +58,8 @@ func (r *companyRepository) Create(ctx context.Context, company *entity.Company)
 func (r *companyRepository) FindByID(ctx context.Context, id int) (*entity.Company, error) {
 	var company entity.Company
 
-	// 企業情報と求人数を一緒に取得
-	err := r.db.WithContext(ctx).
-		Select("companies.*, COALESCE(COUNT(DISTINCT job_postings.id), 0) as job_count").
-		Joins("LEFT JOIN job_postings ON companies.id = job_postings.company_id").
-		Group("companies.id, companies.name, companies.business_description, companies.created_at, companies.updated_at").
-		First(&company, id).Error
+	// 企業情報を取得
+	err := r.db.WithContext(ctx).First(&company, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -112,13 +108,8 @@ func (r *companyRepository) Update(ctx context.Context, company *entity.Company)
 			}
 		}
 
-		// 更新後の企業情報を取得（求人数も含める）
-		if err := tx.
-			Select("companies.*, COALESCE(COUNT(DISTINCT job_postings.id), 0) as job_count").
-			Joins("LEFT JOIN job_postings ON companies.id = job_postings.company_id").
-			Group("companies.id, companies.name, companies.business_description, companies.created_at, companies.updated_at").
-			Preload("CustomFields").
-			First(company, company.ID).Error; err != nil {
+		// 更新後の企業情報を取得
+		if err := tx.Preload("CustomFields").First(company, company.ID).Error; err != nil {
 			return err
 		}
 
@@ -135,11 +126,8 @@ func (r *companyRepository) Delete(ctx context.Context, id int) error {
 func (r *companyRepository) List(ctx context.Context, offset, limit int) ([]*entity.Company, error) {
 	var companies []*entity.Company
 
-	// 企業情報と求人数を一緒に取得
+	// 企業情報を取得
 	if err := r.db.WithContext(ctx).
-		Select("companies.*, COALESCE(COUNT(DISTINCT job_postings.id), 0) as job_count").
-		Joins("LEFT JOIN job_postings ON companies.id = job_postings.company_id").
-		Group("companies.id, companies.name, companies.business_description, companies.created_at, companies.updated_at").
 		Order("companies.id ASC").
 		Offset(offset).
 		Limit(limit).
@@ -171,9 +159,6 @@ func (r *companyRepository) Count(ctx context.Context) (int64, error) {
 func (r *companyRepository) FindWithJobs(ctx context.Context, id int) (*entity.Company, error) {
 	var company entity.Company
 	if err := r.db.WithContext(ctx).
-		Select("companies.*, COALESCE(COUNT(DISTINCT job_postings.id), 0) as job_count").
-		Joins("LEFT JOIN job_postings ON companies.id = job_postings.company_id").
-		Group("companies.id, companies.name, companies.business_description, companies.created_at, companies.updated_at").
 		Preload("Jobs").
 		Preload("Jobs.CustomFields").
 		First(&company, id).Error; err != nil {

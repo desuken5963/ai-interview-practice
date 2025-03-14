@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
-import { companyAPI } from '@/lib/api/client';
-import { Company, CompanyInput } from '@/lib/api/types';
+import { companyAPI, jobPostingAPI } from '@/lib/api/client';
+import { Company, CompanyInput, JobPosting, JobPostingInput } from '@/lib/api/types';
 
 // クライアントサイドのみでレンダリングするためにdynamic importを使用
 const CompanyCard = dynamic(() => import('@/components/companies/CompanyCard'), {
@@ -12,6 +12,14 @@ const CompanyCard = dynamic(() => import('@/components/companies/CompanyCard'), 
 });
 
 const CompanyFormModal = dynamic(() => import('@/components/companies/CompanyFormModal'), {
+  ssr: false,
+});
+
+const JobPostingListModal = dynamic(() => import('@/components/companies/JobPostingListModal'), {
+  ssr: false,
+});
+
+const JobPostingFormModal = dynamic(() => import('@/components/companies/JobPostingFormModal'), {
   ssr: false,
 });
 
@@ -23,6 +31,13 @@ export default function CompaniesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  
+  // 求人関連の状態
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [isJobPostingListModalOpen, setIsJobPostingListModalOpen] = useState(false);
+  const [isJobPostingFormModalOpen, setIsJobPostingFormModalOpen] = useState(false);
+  const [selectedJobPosting, setSelectedJobPosting] = useState<JobPosting | undefined>();
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
 
   // クライアントサイドでのみレンダリングされるようにする
   useEffect(() => {
@@ -37,6 +52,31 @@ export default function CompaniesPage() {
       setLoading(true);
       const response = await companyAPI.getCompanies();
       setCompanies(response.companies);
+
+      // 各企業の求人情報を取得
+      const companiesWithJobPostings = [...response.companies];
+      for (const company of companiesWithJobPostings) {
+        if (company.id) {
+          try {
+            const jobResponse = await jobPostingAPI.getJobPostings(company.id);
+            // 求人情報を保存
+            setCompanies(prev => {
+              return prev.map(c => {
+                if (c.id === company.id) {
+                  return {
+                    ...c,
+                    jobPostings: jobResponse.job_postings
+                  };
+                }
+                return c;
+              });
+            });
+          } catch (error) {
+            console.error(`Error fetching job postings for company ${company.id}:`, error);
+          }
+        }
+      }
+
       // ページネーションの設定
       setTotalPages(Math.ceil(response.total / response.limit));
       setCurrentPage(response.page);
@@ -149,6 +189,94 @@ export default function CompaniesPage() {
     }
   };
 
+  // 求人一覧モーダルを開く
+  const handleJobPostingListOpen = async (company: Company) => {
+    try {
+      setLoading(true);
+      setSelectedCompany(company);
+      const response = await jobPostingAPI.getJobPostings(company.id);
+      setJobPostings(response.job_postings);
+      setIsJobPostingListModalOpen(true);
+    } catch (error) {
+      console.error('Error fetching job postings:', error);
+      setError('求人情報の取得に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 求人追加ハンドラー
+  const handleAddJobPosting = () => {
+    setSelectedJobPosting(undefined);
+    setIsJobPostingFormModalOpen(true);
+    setIsJobPostingListModalOpen(false);
+  };
+
+  // 求人編集ハンドラー
+  const handleEditJobPosting = (jobPosting: JobPosting) => {
+    setSelectedJobPosting(jobPosting);
+    setIsJobPostingFormModalOpen(true);
+    setIsJobPostingListModalOpen(false);
+  };
+
+  // 求人削除ハンドラー
+  const handleDeleteJobPosting = async (jobPostingId: number) => {
+    if (!mounted || !selectedCompany) return;
+    
+    if (!window.confirm('この求人を削除してもよろしいですか？')) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      await jobPostingAPI.deleteJobPosting(jobPostingId);
+      
+      // 求人一覧を更新
+      if (selectedCompany) {
+        const response = await jobPostingAPI.getJobPostings(selectedCompany.id);
+        setJobPostings(response.job_postings);
+        
+        // 企業情報も更新して求人数を反映
+        await handleRefreshCompany(selectedCompany.id);
+      }
+    } catch (error) {
+      console.error('Error deleting job posting:', error);
+      setError('求人の削除に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // 求人保存ハンドラー
+  const handleSubmitJobPosting = async (data: JobPostingInput) => {
+    if (!mounted || !selectedCompany) return;
+    
+    try {
+      setLoading(true);
+      if (selectedJobPosting) {
+        await jobPostingAPI.updateJobPosting(selectedJobPosting.id, data);
+      } else {
+        await jobPostingAPI.createJobPosting(selectedCompany.id, data);
+      }
+      
+      setIsJobPostingFormModalOpen(false);
+      
+      // 求人一覧を更新
+      if (selectedCompany) {
+        const response = await jobPostingAPI.getJobPostings(selectedCompany.id);
+        setJobPostings(response.job_postings);
+        
+        // 企業情報も更新して求人数を反映
+        await handleRefreshCompany(selectedCompany.id);
+      }
+    } catch (error) {
+      console.error('Error submitting job posting:', error);
+      setError('求人情報の保存に失敗しました');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // クライアントサイドでのみレンダリングする
   if (!mounted) {
     return (
@@ -216,7 +344,6 @@ export default function CompaniesPage() {
       {!loading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {companies.map((company) => {
-            // IDの存在確認
             if (!company?.id) {
               console.warn('Company without ID:', company);
               return null;
@@ -229,6 +356,8 @@ export default function CompaniesPage() {
                 onEdit={handleUpdate}
                 onDelete={() => handleDelete(company.id)}
                 onRefresh={handleRefreshCompany}
+                onJobPostingListOpen={() => handleJobPostingListOpen(company)}
+                jobPostings={selectedCompany?.id === company.id ? jobPostings : []}
               />
             );
           })}
@@ -271,6 +400,24 @@ export default function CompaniesPage() {
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSubmit={handleSubmit}
+      />
+
+      <JobPostingListModal
+        isOpen={isJobPostingListModalOpen}
+        onClose={() => setIsJobPostingListModalOpen(false)}
+        companyName={selectedCompany?.name || ''}
+        jobPostings={jobPostings}
+        onAddJobPosting={handleAddJobPosting}
+        onEditJobPosting={handleEditJobPosting}
+        onDeleteJobPosting={handleDeleteJobPosting}
+      />
+
+      <JobPostingFormModal
+        isOpen={isJobPostingFormModalOpen}
+        onClose={() => setIsJobPostingFormModalOpen(false)}
+        onSubmit={handleSubmitJobPosting}
+        initialData={selectedJobPosting}
+        companyName={selectedCompany?.name || ''}
       />
     </div>
   );

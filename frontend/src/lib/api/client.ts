@@ -1,5 +1,5 @@
 // APIクライアントの基本設定
-import { Company, CompanyInput, CompanyListResponse, Job, JobInput, JobResponse } from './types';
+import { Company, CompanyInput, CompanyListResponse, JobPosting, JobPostingInput, JobPostingResponse } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
@@ -66,39 +66,36 @@ export const companyAPI = {
   }),
 
   // 企業と紐づく求人一覧を一括取得
-  getCompanyWithJobs: (id: number) => fetchAPI<Company>(`/api/v1/companies/${id}/with-jobs`),
+  getCompanyWithJobPostings: (id: number) => fetchAPI<Company>(`/api/v1/companies/${id}/with-job-postings`),
 };
 
 // 求人情報のAPI関数
-export const jobAPI = {
+export const jobPostingAPI = {
   // 求人一覧を取得（企業IDが指定されている場合は企業に紐づく求人一覧を取得）
-  getJobs: (companyId?: number) => {
+  getJobPostings: (companyId?: number) => {
     const endpoint = companyId 
       ? `/api/v1/companies/${companyId}/job-postings` 
       : '/api/v1/job-postings';
-    return fetchAPI<JobResponse>(endpoint);
+    return fetchAPI<JobPostingResponse>(endpoint);
   },
   
   // 求人詳細を取得
-  getJob: (id: number) => fetchAPI<Job>(`/api/v1/job-postings/${id}`),
+  getJobPosting: (id: number) => fetchAPI<JobPosting>(`/api/v1/job-postings/${id}`),
   
   // 求人を作成
-  createJob: (companyId: number, data: JobInput) => fetchAPI<Job>(`/api/v1/companies/${companyId}/job-postings`, {
+  createJobPosting: (companyId: number, data: JobPostingInput) => fetchAPI<JobPosting>(`/api/v1/companies/${companyId}/job-postings`, {
     method: 'POST',
     body: JSON.stringify(data),
   }),
   
   // 求人を更新
-  updateJob: (id: number, data: JobInput) => fetchAPI<Job>(`/api/v1/job-postings/${id}`, {
+  updateJobPosting: (id: number, data: JobPostingInput) => fetchAPI<JobPosting>(`/api/v1/job-postings/${id}`, {
     method: 'PUT',
     body: JSON.stringify(data),
   }),
   
   // 求人を削除
-  deleteJob: (id: number) => fetchAPI<void>(`/api/v1/job-postings/${id}`, {
+  deleteJobPosting: (id: number) => fetchAPI<void>(`/api/v1/job-postings/${id}`, {
     method: 'DELETE',
   }),
-
-  // 企業と紐づく求人一覧を一括取得
-  getCompanyWithJobs: (companyId: number) => fetchAPI<Company>(`/api/v1/companies/${companyId}/with-job-postings`),
 }; 
