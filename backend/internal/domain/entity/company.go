@@ -8,6 +8,7 @@ type Company struct {
 	Name                string               `json:"name" gorm:"not null"`
 	BusinessDescription *string              `json:"business_description" gorm:"type:text"`
 	CustomFields        []CompanyCustomField `json:"custom_fields" gorm:"foreignKey:CompanyID"`
+	JobPostings         []JobPosting         `json:"job_postings" gorm:"foreignKey:CompanyID"`
 	CreatedAt           time.Time            `json:"created_at" gorm:"not null;default:CURRENT_TIMESTAMP"`
 	UpdatedAt           time.Time            `json:"updated_at" gorm:"not null;default:CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP"`
 }
@@ -25,7 +26,7 @@ type CompanyCustomField struct {
 // CompanyResponse は企業情報のレスポンス形式を表します
 type CompanyResponse struct {
 	Companies []Company `json:"companies"`
-	Total     int64     `json:"total"`
+	Total     int       `json:"total"`
 	Page      int       `json:"page"`
 	Limit     int       `json:"limit"`
 }

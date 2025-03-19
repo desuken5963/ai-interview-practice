@@ -22,11 +22,3 @@ type JobCustomField struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 }
-
-// JobResponse は求人一覧のレスポンスを表すエンティティです
-type JobResponse struct {
-	JobPostings []JobPosting `json:"jobPostings"`
-	Total       int          `json:"total"`
-	Page        int          `json:"page"`
-	Limit       int          `json:"limit"`
-}
