@@ -204,7 +204,7 @@ paths:
             minimum: 1
             maximum: 100
             default: 6
-          description: 1ページあたりの件数（デフォルト: 6）
+          description: 1ページあたりの件数。デフォルト値は6です。
       responses:
         '200':
           description: 成功

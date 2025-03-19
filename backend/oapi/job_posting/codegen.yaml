@@ -1,7 +1,7 @@
 package: job_posting
 
 generate:
-  types: true
+  models: true
   server: true
   client: true
   spec: true
@@ -9,15 +9,13 @@ generate:
   strict-server: true
   skip-prune: true
   skip-fmt: false
-  import-mapping:
-    time: time
-    uuid: github.com/google/uuid
+  embedded-spec: true
 
-# OpenAPI仕様ファイルのパスを指定
-input-file: backend/oapi/job_posting/openapi.yaml
-# 生成されるコードの出力先を指定
-output: internal/domain/api/job_posting.gen.go
-# 生成されるコードのパッケージ名を指定
-package-name: api
-# 生成されるコードのインポートパスを指定
-import-path: github.com/takanoakira/ai-interview-practice/backend/internal/domain/api 
+output:
+  internal/domain/api/job_posting.gen.go
+
+package: api
+
+import-mapping:
+  time: time
+  uuid: github.com/google/uuid 

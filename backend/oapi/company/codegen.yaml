@@ -1,23 +1,17 @@
-package: company
+# yaml-language-server: $schema=https://raw.githubusercontent.com/deepmap/oapi-codegen/HEAD/configuration-schema.json
+package: api
+
+output:
+  internal/domain/api/company.gen.go
 
 generate:
-  types: true
-  server: true
-  client: true
-  spec: true
-  gin-server: true
-  strict-server: true
-  skip-prune: true
-  skip-fmt: false
-  import-mapping:
-    time: time
-    uuid: github.com/google/uuid
+  - models
+  - client
+  - spec
+  - gin-server
+  - strict-server
+  - embedded-spec
 
-# OpenAPI仕様ファイルのパスを指定
-input-file: backend/oapi/company/openapi.yaml
-# 生成されるコードの出力先を指定
-output: internal/domain/api/company.gen.go
-# 生成されるコードのパッケージ名を指定
-package-name: api
-# 生成されるコードのインポートパスを指定
-import-path: github.com/takanoakira/ai-interview-practice/backend/internal/domain/api 
+import-mapping:
+  time: time
+  uuid: github.com/google/uuid 
