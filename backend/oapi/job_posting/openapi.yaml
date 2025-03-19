@@ -1,0 +1,149 @@
+openapi: 3.0.0
+info:
+  title: 求人情報API
+  version: 1.0.0
+  description: 求人情報の管理を行うAPI
+
+servers:
+  - url: /api/v1
+
+components:
+  schemas:
+    JobPosting:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        company_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        custom_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobCustomField'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - company_id
+        - title
+        - created_at
+        - updated_at
+
+    JobCustomField:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        job_id:
+          type: integer
+          format: int64
+        field_name:
+          type: string
+        content:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+      required:
+        - id
+        - job_id
+        - field_name
+        - content
+        - created_at
+        - updated_at
+
+    JobPostingInput:
+      type: object
+      properties:
+        company_id:
+          type: integer
+          format: int64
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+          nullable: true
+        custom_fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobCustomFieldInput'
+      required:
+        - company_id
+        - title
+
+    JobCustomFieldInput:
+      type: object
+      properties:
+        field_name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        content:
+          type: string
+          maxLength: 500
+      required:
+        - field_name
+        - content
+
+paths:
+  /job-postings/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+        description: 求人ID
+
+    put:
+      summary: 求人情報の更新
+      description: 指定された求人情報を更新します
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobPostingInput'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPosting'
+        '400':
+          description: 不正なリクエスト
+        '404':
+          description: 求人が見つかりません
+        '500':
+          description: サーバーエラー
+
+    delete:
+      summary: 求人情報の削除
+      description: 指定された求人情報を削除します
+      responses:
+        '204':
+          description: 削除成功
+        '404':
+          description: 求人が見つかりません
+        '500':
+          description: サーバーエラー 

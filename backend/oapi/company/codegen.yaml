@@ -1,0 +1,23 @@
+package: company
+
+generate:
+  types: true
+  server: true
+  client: true
+  spec: true
+  gin-server: true
+  strict-server: true
+  skip-prune: true
+  skip-fmt: false
+  import-mapping:
+    time: time
+    uuid: github.com/google/uuid
+
+# OpenAPI仕様ファイルのパスを指定
+input-file: backend/oapi/company/openapi.yaml
+# 生成されるコードの出力先を指定
+output: internal/domain/api/company.gen.go
+# 生成されるコードのパッケージ名を指定
+package-name: api
+# 生成されるコードのインポートパスを指定
+import-path: github.com/takanoakira/ai-interview-practice/backend/internal/domain/api 
