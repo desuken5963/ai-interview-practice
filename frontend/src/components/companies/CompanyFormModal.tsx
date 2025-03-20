@@ -2,25 +2,26 @@
 
 import { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { CompanyInput } from '@/lib/api/types';
+import { Company, CompanyInput } from '@/lib/api/types';
+import { companyAPI } from '@/lib/api/client';
 
 type CompanyFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: CompanyInput) => Promise<void>;
-  initialData?: CompanyInput;
+  onSuccess: () => void;
+  company?: Company;
 };
 
 export default function CompanyFormModal({
   isOpen,
   onClose,
-  onSubmit,
-  initialData,
+  onSuccess,
+  company,
 }: CompanyFormModalProps) {
   const [formData, setFormData] = useState<CompanyInput>({
-    name: initialData?.name || '',
-    businessDescription: initialData?.businessDescription || '',
-    customFields: initialData?.customFields || [],
+    name: '',
+    businessDescription: '',
+    customFields: [],
   });
 
   const [errors, setErrors] = useState<{
@@ -37,8 +38,15 @@ export default function CompanyFormModal({
   // モーダルが開かれた時にフォームをリセット
   useEffect(() => {
     if (isOpen) {
-      if (initialData) {
-        setFormData(initialData);
+      if (company) {
+        setFormData({
+          name: company.name,
+          businessDescription: company.businessDescription,
+          customFields: company.customFields.map(field => ({
+            fieldName: field.fieldName,
+            content: field.content,
+          })),
+        });
       } else {
         setFormData({
           name: '',
@@ -48,7 +56,7 @@ export default function CompanyFormModal({
       }
       setErrors({});
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, company]);
 
   // バリデーション関数
   const validateForm = () => {
@@ -83,7 +91,7 @@ export default function CompanyFormModal({
   };
 
   // カスタムフィールドの追加
-  const addCustomField = () => {
+  const handleAddCustomField = () => {
     setFormData(prev => ({
       ...prev,
       customFields: [
@@ -94,7 +102,7 @@ export default function CompanyFormModal({
   };
 
   // カスタムフィールドの削除
-  const removeCustomField = (index: number) => {
+  const handleRemoveCustomField = (index: number) => {
     setFormData(prev => ({
       ...prev,
       customFields: prev.customFields.filter((_, i) => i !== index)
@@ -111,7 +119,14 @@ export default function CompanyFormModal({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(formData);
+      if (company) {
+        // 編集の場合
+        await companyAPI.updateCompany(company.id, formData);
+      } else {
+        // 新規登録の場合
+        await companyAPI.createCompany(formData);
+      }
+      onSuccess();
       onClose();
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -136,7 +151,7 @@ export default function CompanyFormModal({
             <div className="bg-white px-4 pb-6 pt-5 sm:p-6">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  {initialData ? '企業情報を編集' : '企業を登録'}
+                  {company ? '企業情報を編集' : '企業を登録'}
                 </h3>
                 <button
                   type="button"
@@ -202,7 +217,7 @@ export default function CompanyFormModal({
                     </label>
                     <button
                       type="button"
-                      onClick={addCustomField}
+                      onClick={handleAddCustomField}
                       className="inline-flex items-center px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
                     >
                       <PlusIcon className="w-4 h-4 mr-1" />
@@ -215,15 +230,13 @@ export default function CompanyFormModal({
                       <div key={index} className="p-4 border border-gray-200 rounded-md bg-gray-50">
                         <div className="flex justify-between items-center mb-2">
                           <label className="text-sm font-medium text-gray-700">項目 {index + 1}</label>
-                          {formData.customFields.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeCustomField(index)}
-                              className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100"
-                            >
-                              <TrashIcon className="w-5 h-5" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomField(index)}
+                            className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100"
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
                         </div>
                         <div className="space-y-3">
                           <div>

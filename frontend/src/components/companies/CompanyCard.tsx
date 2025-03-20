@@ -3,27 +3,23 @@
 import { useState } from 'react';
 import { PlayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
-import { Company, CompanyInput, CustomField } from '@/lib/api/types';
+import { Company, CompanyInput } from '@/lib/api/types';
+import { companyAPI } from '@/lib/api/client';
 
-// クライアントサイドのみでレンダリングするためにdynamic importを使用
-const CompanyFormModal = dynamic(() => import('./CompanyFormModal'), {
-  ssr: false,
-});
+const CompanyFormModal = dynamic(() => import('./CompanyFormModal'));
+const JobPostingListModal = dynamic(() => import('./JobPostingListModal'));
 
 type CompanyCardProps = {
   company: Company;
-  onEdit?: (companyId: number, data: CompanyInput) => void;
-  onDelete?: () => void;
-  onJobListClick?: (company: Company) => void;
+  onRefresh: () => void;
 };
 
 export default function CompanyCard({ 
-  company, 
-  onEdit, 
-  onDelete,
-  onJobListClick,
+  company,
+  onRefresh,
 }: CompanyCardProps) {
   const [isCompanyFormModalOpen, setIsCompanyFormModalOpen] = useState(false);
+  const [isJobPostingListModalOpen, setIsJobPostingListModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // 企業情報編集ハンドラー
@@ -31,16 +27,17 @@ export default function CompanyCard({
     setIsCompanyFormModalOpen(true);
   };
 
-  // 企業情報保存ハンドラー
-  const handleSubmitCompany = async (data: CompanyInput) => {
+  // 企業削除ハンドラー
+  const handleDeleteCompany = async () => {
+    if (!window.confirm('この企業を削除してもよろしいですか？この操作は取り消せません。')) {
+      return;
+    }
     try {
-      if (onEdit) {
-        await onEdit(company.id, data);
-      }
-      setIsCompanyFormModalOpen(false);
+      await companyAPI.deleteCompany(company.id);
+      onRefresh();
     } catch (error) {
-      console.error('Error submitting company:', error);
-      setError('企業情報の更新に失敗しました');
+      console.error('Error deleting company:', error);
+      setError('企業の削除に失敗しました');
     }
   };
 
@@ -63,22 +60,18 @@ export default function CompanyCard({
         <div className="flex justify-between items-start mb-4">
           <h2 className="text-xl font-semibold text-gray-900">{company.name}</h2>
           <div className="flex gap-2">
-            {onEdit && (
-              <button
-                className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-                onClick={handleEditCompany}
-              >
-                <PencilIcon className="w-5 h-5" />
-              </button>
-            )}
-            {onDelete && (
-              <button
-                className="p-1 text-gray-500 hover:text-red-600 transition-colors"
-                onClick={onDelete}
-              >
-                <TrashIcon className="w-5 h-5" />
-              </button>
-            )}
+            <button
+              className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+              onClick={handleEditCompany}
+            >
+              <PencilIcon className="w-5 h-5" />
+            </button>
+            <button
+              className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+              onClick={handleDeleteCompany}
+            >
+              <TrashIcon className="w-5 h-5" />
+            </button>
           </div>
         </div>
 
@@ -91,7 +84,7 @@ export default function CompanyCard({
         {company.customFields.length > 0 && (
           <div className="mb-4">
             <dl className="grid grid-cols-2 gap-2">
-              {company.customFields.map((field: CustomField, index: number) => (
+              {company.customFields.map((field, index) => (
                 <div key={index} className="col-span-1">
                   <dt className="text-sm font-medium text-gray-500">
                     {field.fieldName}
@@ -108,7 +101,7 @@ export default function CompanyCard({
         <div className="flex items-center justify-between mt-4">
           <button
             className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 transition-colors gap-1"
-            onClick={() => onJobListClick?.(company)}
+            onClick={() => setIsJobPostingListModalOpen(true)}
           >
             <span>求人一覧</span>
             <span className="font-semibold">({company.jobPostings?.length || 0})</span>
@@ -126,12 +119,18 @@ export default function CompanyCard({
       <CompanyFormModal
         isOpen={isCompanyFormModalOpen}
         onClose={() => setIsCompanyFormModalOpen(false)}
-        onSubmit={handleSubmitCompany}
-        initialData={{
-          name: company.name,
-          businessDescription: company.businessDescription,
-          customFields: company.customFields,
+        onSuccess={() => {
+          setIsCompanyFormModalOpen(false);
+          onRefresh();
         }}
+        company={company}
+      />
+
+      <JobPostingListModal
+        isOpen={isJobPostingListModalOpen}
+        onClose={() => setIsJobPostingListModalOpen(false)}
+        company={company}
+        onSuccess={onRefresh}
       />
     </>
   );

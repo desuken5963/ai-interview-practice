@@ -1,124 +1,38 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
-import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Company, CompanyInput, JobPosting, JobPostingInput } from '@/lib/api/types';
+import { Company } from '@/lib/api/types';
 import { companyAPI } from '@/lib/api/client';
 
 // クライアントサイドのみでレンダリングするためにdynamic importを使用
 const CompanyCard = dynamic(() => import('@/components/companies/CompanyCard'));
 const CompanyFormModal = dynamic(() => import('@/components/companies/CompanyFormModal'));
-const JobPostingListModal = dynamic(() => import('@/components/companies/JobPostingListModal'));
-const JobPostingFormModal = dynamic(() => import('@/components/companies/JobPostingFormModal'));
-
-// Company型からCompanyInput型への変換関数
-const convertToCompanyInput = (company: Company | null): CompanyInput | undefined => {
-  if (!company) return undefined;
-  return {
-    name: company.name,
-    businessDescription: company.businessDescription,
-    customFields: company.customFields.map(field => ({
-      fieldName: field.fieldName,
-      content: field.content,
-    })),
-  };
-};
 
 export default function CompaniesPage() {
-  const router = useRouter();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isCompanyFormModalOpen, setIsCompanyFormModalOpen] = useState(false);
-  const [isJobPostingListModalOpen, setIsJobPostingListModalOpen] = useState(false);
-  const [isJobPostingFormModalOpen, setIsJobPostingFormModalOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
-  const [selectedJobPosting, setSelectedJobPosting] = useState<JobPosting | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
 
   const fetchCompanies = async () => {
     try {
       const response = await companyAPI.getCompanies();
       setCompanies(response.companies);
     } catch (error) {
-      console.error('Failed to fetch companies:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('Error fetching companies:', error);
     }
   };
 
-  const handleAddCompany = () => {
-    setSelectedCompany(null);
-    setIsCompanyFormModalOpen(true);
-  };
-
-  const handleEditCompany = (company: Company) => {
-    setSelectedCompany(company);
-    setIsCompanyFormModalOpen(true);
-  };
-
-  const handleDeleteCompany = async (company: Company) => {
-    if (!window.confirm('この企業を削除してもよろしいですか？この操作は取り消せません。')) {
-      return;
-    }
-
-    try {
-      await companyAPI.deleteCompany(company.id);
-      await fetchCompanies();
-    } catch (error) {
-      console.error('Error deleting company:', error);
-    }
-  };
-
-  const handleJobListClick = (company: Company) => {
-    setSelectedCompany(company);
-    setIsJobPostingListModalOpen(true);
-  };
-
-  const handleCompanyFormSubmit = async () => {
-    await fetchCompanies();
-    setIsCompanyFormModalOpen(false);
-  };
-
-  const handleAddJobPosting = () => {
-    setIsJobPostingFormModalOpen(true);
-  };
-
-  const handleEditJobPosting = (jobPosting: JobPosting) => {
-    setSelectedJobPosting(jobPosting);
-    setIsJobPostingFormModalOpen(true);
-  };
-
-  const handleDeleteJobPosting = async (jobPostingId: number) => {
-    if (!window.confirm('この求人を削除してもよろしいですか？この操作は取り消せません。')) {
-      return;
-    }
-    await fetchCompanies();
-  };
-
-  const handleJobPostingFormSubmit = async (data: JobPostingInput) => {
-    await fetchCompanies();
-    setIsJobPostingFormModalOpen(false);
-  };
-
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900">企業一覧</h1>
         <button
-          onClick={handleAddCompany}
+          onClick={() => setIsCompanyFormModalOpen(true)}
           className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
         >
           <PlusIcon className="w-5 h-5 mr-2" />
@@ -136,9 +50,7 @@ export default function CompaniesPage() {
             <CompanyCard
               key={company.id}
               company={company}
-              onEdit={() => handleEditCompany(company)}
-              onDelete={() => handleDeleteCompany(company)}
-              onJobListClick={() => handleJobListClick(company)}
+              onRefresh={fetchCompanies}
             />
           ))}
         </div>
@@ -147,26 +59,10 @@ export default function CompaniesPage() {
       <CompanyFormModal
         isOpen={isCompanyFormModalOpen}
         onClose={() => setIsCompanyFormModalOpen(false)}
-        onSubmit={handleCompanyFormSubmit}
-        initialData={convertToCompanyInput(selectedCompany)}
-      />
-
-      <JobPostingListModal
-        isOpen={isJobPostingListModalOpen}
-        onClose={() => setIsJobPostingListModalOpen(false)}
-        companyName={selectedCompany?.name || ''}
-        jobPostings={selectedCompany?.jobPostings || []}
-        onAddJobPosting={handleAddJobPosting}
-        onEditJobPosting={() => {}}
-        onDeleteJobPosting={() => {}}
-      />
-
-      <JobPostingFormModal
-        isOpen={isJobPostingFormModalOpen}
-        onClose={() => setIsJobPostingFormModalOpen(false)}
-        onSubmit={handleJobPostingFormSubmit}
-        initialData={selectedJobPosting || undefined}
-        companyName={selectedCompany?.name || ''}
+        onSuccess={() => {
+          setIsCompanyFormModalOpen(false);
+          fetchCompanies();
+        }}
       />
     </div>
   );

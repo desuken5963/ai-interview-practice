@@ -3,26 +3,29 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import { JobPosting, JobPostingInput } from '@/lib/api/types';
+import { jobPostingAPI } from '@/lib/api/client';
 
 type JobPostingFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: JobPostingInput) => Promise<void>;
-  initialData?: JobPosting;
+  onSuccess: () => void;
+  jobPosting?: JobPosting;
+  companyId: number;
   companyName: string;
 };
 
 export default function JobPostingFormModal({
   isOpen,
   onClose,
-  onSubmit,
-  initialData,
+  onSuccess,
+  jobPosting,
+  companyId,
   companyName,
 }: JobPostingFormModalProps) {
   const [formData, setFormData] = useState<JobPostingInput>({
-    title: initialData?.title || '',
-    description: initialData?.description || '',
-    customFields: initialData?.customFields || [],
+    title: '',
+    description: '',
+    customFields: [],
   });
 
   const [errors, setErrors] = useState<{
@@ -39,11 +42,14 @@ export default function JobPostingFormModal({
   // モーダルが開かれた時にフォームをリセット
   useEffect(() => {
     if (isOpen) {
-      if (initialData) {
+      if (jobPosting) {
         setFormData({
-          title: initialData.title,
-          description: initialData.description,
-          customFields: initialData.customFields,
+          title: jobPosting.title,
+          description: jobPosting.description || '',
+          customFields: jobPosting.customFields.map(field => ({
+            fieldName: field.fieldName,
+            content: field.content,
+          })),
         });
       } else {
         setFormData({
@@ -54,7 +60,7 @@ export default function JobPostingFormModal({
       }
       setErrors({});
     }
-  }, [isOpen, initialData]);
+  }, [isOpen, jobPosting]);
 
   // フォームの入力値を更新
   const handleInputChange = (
@@ -131,20 +137,27 @@ export default function JobPostingFormModal({
   // フォームの送信
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
+    
     if (!validateForm()) {
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      await onSubmit(formData);
+      if (jobPosting) {
+        // 編集の場合
+        await jobPostingAPI.updateJobPosting(jobPosting.id, formData);
+      } else {
+        // 新規登録の場合
+        await jobPostingAPI.createJobPosting(companyId, formData);
+      }
+      onSuccess();
       onClose();
     } catch (error) {
       console.error('Error submitting form:', error);
-      setErrors((prev) => ({
+      setErrors(prev => ({
         ...prev,
-        submit: '保存に失敗しました',
+        submit: '保存に失敗しました。もう一度お試しください。'
       }));
     } finally {
       setIsSubmitting(false);
@@ -163,7 +176,7 @@ export default function JobPostingFormModal({
             <div className="bg-white px-4 pb-6 pt-5 sm:p-6">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  {initialData ? '求人を編集' : '求人を追加'} - {companyName}
+                  {jobPosting ? '求人を編集' : '求人を追加'} - {companyName}
                 </h3>
                 <button
                   type="button"
@@ -306,7 +319,7 @@ export default function JobPostingFormModal({
                     保存中...
                   </>
                 ) : (
-                  initialData ? '更新する' : '登録する'
+                  jobPosting ? '更新する' : '登録する'
                 )}
               </button>
               <button
