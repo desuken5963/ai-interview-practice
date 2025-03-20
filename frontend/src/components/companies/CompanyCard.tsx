@@ -1,20 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { PlayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
-import { Company, JobPosting, CompanyInput, JobPostingInput } from '@/lib/api/types';
-import { jobPostingAPI } from '@/lib/api/client';
+import { Company, CompanyInput, CustomField } from '@/lib/api/types';
 
 // クライアントサイドのみでレンダリングするためにdynamic importを使用
-const JobPostingListModal = dynamic(() => import('./JobPostingListModal'), {
-  ssr: false,
-});
-
-const JobPostingFormModal = dynamic(() => import('./JobPostingFormModal'), {
-  ssr: false,
-});
-
 const CompanyFormModal = dynamic(() => import('./CompanyFormModal'), {
   ssr: false,
 });
@@ -23,113 +14,17 @@ type CompanyCardProps = {
   company: Company;
   onEdit?: (companyId: number, data: CompanyInput) => void;
   onDelete?: () => void;
-  onRefresh?: (companyId: number) => Promise<void>;
-  onJobPostingListOpen?: () => void;
-  jobPostings?: JobPosting[];
+  onJobListClick?: (company: Company) => void;
 };
 
 export default function CompanyCard({ 
   company, 
   onEdit, 
-  onDelete, 
-  onRefresh, 
-  onJobPostingListOpen,
-  jobPostings = []
+  onDelete,
+  onJobListClick,
 }: CompanyCardProps) {
-  const [isJobPostingListModalOpen, setIsJobPostingListModalOpen] = useState(false);
-  const [isJobPostingFormModalOpen, setIsJobPostingFormModalOpen] = useState(false);
   const [isCompanyFormModalOpen, setIsCompanyFormModalOpen] = useState(false);
-  const [selectedJobPosting, setSelectedJobPosting] = useState<JobPosting | undefined>();
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-
-  // クライアントサイドでのみレンダリングされるようにする
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // 求人一覧を開く際のハンドラー
-  const handleJobPostingListOpen = async () => {
-    if (!mounted) return;
-    
-    try {
-      setLoading(true);
-      if (onJobPostingListOpen) {
-        await onJobPostingListOpen();
-      }
-      setIsJobPostingListModalOpen(true);
-    } catch (error) {
-      console.error('Error opening job posting list:', error);
-      setError('求人情報の取得に失敗しました');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 求人追加ハンドラー
-  const handleAddJobPosting = () => {
-    setSelectedJobPosting(undefined);
-    setIsJobPostingFormModalOpen(true);
-    setIsJobPostingListModalOpen(false);
-  };
-
-  // 求人編集ハンドラー
-  const handleEditJobPosting = (jobPosting: JobPosting) => {
-    setSelectedJobPosting(jobPosting);
-    setIsJobPostingFormModalOpen(true);
-    setIsJobPostingListModalOpen(false);
-  };
-
-  // 求人削除ハンドラー
-  const handleDeleteJobPosting = async (jobPostingId: number) => {
-    if (!mounted) return;
-    
-    try {
-      setLoading(true);
-      // 求人削除APIを呼び出す
-      await jobPostingAPI.deleteJobPosting(jobPostingId);
-      
-      // 企業情報を更新
-      if (onRefresh) {
-        await onRefresh(company.id);
-      }
-    } catch (error) {
-      console.error('Error deleting job posting:', error);
-      setError('求人の削除に失敗しました');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 求人保存ハンドラー
-  const handleSubmitJobPosting = async (data: JobPostingInput) => {
-    if (!mounted) return;
-    
-    try {
-      setLoading(true);
-      if (selectedJobPosting) {
-        // 編集の場合
-        await jobPostingAPI.updateJobPosting(selectedJobPosting.id, data);
-      } else {
-        // 新規登録の場合
-        await jobPostingAPI.createJobPosting(company.id, data);
-      }
-      
-      // モーダルを閉じる
-      setIsJobPostingFormModalOpen(false);
-      
-      // 企業情報を更新
-      if (onRefresh) {
-        await onRefresh(company.id);
-      }
-    } catch (error) {
-      console.error('Error submitting job posting:', error);
-      setError('求人情報の保存に失敗しました');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // 企業情報編集ハンドラー
   const handleEditCompany = () => {
@@ -138,20 +33,14 @@ export default function CompanyCard({
 
   // 企業情報保存ハンドラー
   const handleSubmitCompany = async (data: CompanyInput) => {
-    if (!mounted) return;
-    
     try {
-      setLoading(true);
       if (onEdit) {
-        // 親コンポーネントの更新処理を呼び出す
         await onEdit(company.id, data);
       }
       setIsCompanyFormModalOpen(false);
     } catch (error) {
       console.error('Error submitting company:', error);
       setError('企業情報の更新に失敗しました');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -193,19 +82,19 @@ export default function CompanyCard({
           </div>
         </div>
 
-        {company.business_description && (
+        {company.businessDescription && (
           <p className="text-gray-600 mb-4 line-clamp-3">
-            {company.business_description}
+            {company.businessDescription}
           </p>
         )}
 
-        {company.custom_fields.length > 0 && (
+        {company.customFields.length > 0 && (
           <div className="mb-4">
             <dl className="grid grid-cols-2 gap-2">
-              {company.custom_fields.map((field, index) => (
+              {company.customFields.map((field: CustomField, index: number) => (
                 <div key={index} className="col-span-1">
                   <dt className="text-sm font-medium text-gray-500">
-                    {field.field_name}
+                    {field.fieldName}
                   </dt>
                   <dd className="text-sm text-gray-900">
                     {field.content}
@@ -219,17 +108,10 @@ export default function CompanyCard({
         <div className="flex items-center justify-between mt-4">
           <button
             className="inline-flex items-center text-sm text-gray-500 hover:text-blue-600 transition-colors gap-1"
-            onClick={handleJobPostingListOpen}
-            disabled={loading}
+            onClick={() => onJobListClick?.(company)}
           >
-            {loading ? (
-              <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin mr-2"></span>
-            ) : (
-              <>
-                <span>求人一覧</span>
-                <span className="font-semibold">({company.jobPostings?.length || jobPostings.length || 0})</span>
-              </>
-            )}
+            <span>求人一覧</span>
+            <span className="font-semibold">({company.jobPostings?.length || 0})</span>
           </button>
           <button
             className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
@@ -241,32 +123,14 @@ export default function CompanyCard({
         </div>
       </div>
 
-      <JobPostingListModal
-        isOpen={isJobPostingListModalOpen}
-        onClose={() => setIsJobPostingListModalOpen(false)}
-        companyName={company.name}
-        jobPostings={jobPostings}
-        onAddJobPosting={handleAddJobPosting}
-        onEditJobPosting={handleEditJobPosting}
-        onDeleteJobPosting={handleDeleteJobPosting}
-      />
-
-      <JobPostingFormModal
-        isOpen={isJobPostingFormModalOpen}
-        onClose={() => setIsJobPostingFormModalOpen(false)}
-        onSubmit={handleSubmitJobPosting}
-        initialData={selectedJobPosting}
-        companyName={company.name}
-      />
-
       <CompanyFormModal
         isOpen={isCompanyFormModalOpen}
         onClose={() => setIsCompanyFormModalOpen(false)}
         onSubmit={handleSubmitCompany}
         initialData={{
           name: company.name,
-          business_description: company.business_description,
-          custom_fields: company.custom_fields,
+          businessDescription: company.businessDescription,
+          customFields: company.customFields,
         }}
       />
     </>

@@ -1,7 +1,68 @@
 // APIクライアントの基本設定
-import { Company, CompanyInput, CompanyListResponse, JobPosting, JobPostingInput, JobPostingResponse } from './types';
+import {
+  Company,
+  CompanyInput,
+  CompanyListResponse,
+  APICompany,
+  APICompanyListResponse,
+  CustomField,
+  APICustomField,
+  JobPosting,
+  APIJobPosting
+} from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+
+// スネークケースからキャメルケースへの変換関数
+function convertCustomField(field: APICustomField): CustomField {
+  return {
+    id: field.id,
+    fieldName: field.field_name,
+    content: field.content,
+    createdAt: field.created_at,
+    updatedAt: field.updated_at,
+  };
+}
+
+function convertJobPosting(posting: APIJobPosting): JobPosting {
+  return {
+    id: posting.id,
+    companyId: posting.company_id,
+    title: posting.title,
+    description: posting.description,
+    customFields: posting.custom_fields.map(convertCustomField),
+    createdAt: posting.created_at,
+    updatedAt: posting.updated_at,
+  };
+}
+
+function convertCompany(company: APICompany): Company {
+  return {
+    id: company.id,
+    name: company.name,
+    businessDescription: company.business_description,
+    customFields: company.custom_fields.map(convertCustomField),
+    jobPostings: company.job_postings.map(convertJobPosting),
+    createdAt: company.created_at,
+    updatedAt: company.updated_at,
+  };
+}
+
+// キャメルケースからスネークケースへの変換関数
+function convertToAPICustomField(field: Partial<CustomField>): Partial<APICustomField> {
+  return {
+    field_name: field.fieldName,
+    content: field.content,
+  };
+}
+
+function convertToAPICompanyInput(input: CompanyInput): any {
+  return {
+    name: input.name,
+    business_description: input.businessDescription,
+    custom_fields: input.customFields.map(convertToAPICustomField),
+  };
+}
 
 // 基本的なフェッチ関数
 async function fetchAPI<T>(
@@ -43,30 +104,40 @@ async function fetchAPI<T>(
 // 企業情報のAPI関数
 export const companyAPI = {
   // 企業一覧を取得
-  getCompanies: () => fetchAPI<CompanyListResponse>('/api/v1/companies'),
-  
-  // 企業詳細を取得
-  getCompany: (id: number) => fetchAPI<Company>(`/api/v1/companies/${id}`),
+  getCompanies: async () => {
+    const response = await fetchAPI<APICompanyListResponse>('/api/v1/companies');
+    return {
+      companies: response.companies.map(convertCompany),
+      total: response.total,
+      page: response.page,
+      limit: response.limit,
+    } as CompanyListResponse;
+  },
   
   // 企業を作成
-  createCompany: (data: CompanyInput) => fetchAPI<Company>('/api/v1/companies', {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  createCompany: async (data: CompanyInput) => {
+    const apiData = convertToAPICompanyInput(data);
+    const response = await fetchAPI<APICompany>('/api/v1/companies', {
+      method: 'POST',
+      body: JSON.stringify(apiData),
+    });
+    return convertCompany(response);
+  },
   
   // 企業を更新
-  updateCompany: (id: number, data: CompanyInput) => fetchAPI<Company>(`/api/v1/companies/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
+  updateCompany: async (id: number, data: CompanyInput) => {
+    const apiData = convertToAPICompanyInput(data);
+    const response = await fetchAPI<APICompany>(`/api/v1/companies/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(apiData),
+    });
+    return convertCompany(response);
+  },
   
   // 企業を削除
   deleteCompany: (id: number) => fetchAPI<void>(`/api/v1/companies/${id}`, {
     method: 'DELETE',
   }),
-
-  // 企業と紐づく求人一覧を一括取得
-  getCompanyWithJobPostings: (id: number) => fetchAPI<Company>(`/api/v1/companies/${id}/with-job-postings`),
 };
 
 // 求人情報のAPI関数

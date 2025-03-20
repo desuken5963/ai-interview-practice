@@ -101,13 +101,13 @@ export default function JobPostingListModal({
                     <p className="text-sm sm:text-base text-gray-600 mb-3 line-clamp-2">{jobPosting.description}</p>
                   )}
 
-                  {jobPosting.custom_fields.length > 0 && (
+                  {jobPosting.customFields.length > 0 && (
                     <div className="mb-3">
                       <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        {jobPosting.custom_fields.map((field, index) => (
+                        {jobPosting.customFields.map((field, index) => (
                           <div key={index} className="col-span-1">
                             <dt className="text-xs sm:text-sm font-medium text-gray-500">
-                              {field.field_name}
+                              {field.fieldName}
                             </dt>
                             <dd className="text-xs sm:text-sm text-gray-900">
                               {field.content}
@@ -120,7 +120,7 @@ export default function JobPostingListModal({
 
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
                     <div className="text-xs sm:text-sm text-gray-500">
-                      登録日: {formatDate(jobPosting.created_at)}
+                      登録日: {formatDate(jobPosting.createdAt)}
                     </div>
                     <button
                       className="w-full sm:w-auto inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
