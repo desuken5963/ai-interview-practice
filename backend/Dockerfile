@@ -12,8 +12,11 @@ RUN go install github.com/cosmtrek/air@v1.49.0
 # Go 1.21と互換性のあるgolang-migrateのバージョンをインストール
 RUN go install -tags 'mysql' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.16.2
 
-# OpenAPIコード生成ツールをインストール
-RUN go install github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen@v2.0.0
+# GORMとMySQLドライバーをインストール
+RUN go get -u gorm.io/gorm gorm.io/driver/mysql
+
+# Ginフレームワークをインストール
+RUN go get -u github.com/gin-gonic/gin
 
 # 依存関係のコピーとダウンロード
 COPY go.mod go.sum ./
