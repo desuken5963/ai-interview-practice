@@ -5,149 +5,113 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
 	"github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job_posting"
 )
 
-// JobPostingHandler は求人情報に関するHTTPハンドラーを提供します
-type JobPostingHandler struct {
-	usecase job_posting.JobPostingUsecase
+type Handler interface {
+	CreateJobPosting(c *gin.Context)
+	UpdateJobPosting(c *gin.Context)
+	DeleteJobPosting(c *gin.Context)
 }
 
-// NewJobPostingHandler は新しいJobPostingHandlerインスタンスを作成します
-func NewJobPostingHandler(usecase job_posting.JobPostingUsecase) *JobPostingHandler {
-	return &JobPostingHandler{usecase: usecase}
+type handler struct {
+	usecase job_posting.UseCase
 }
 
-// CreateJobPosting は新しい求人情報を作成します
-func (h *JobPostingHandler) CreateJobPosting(c *gin.Context) {
-	var job entity.JobPosting
-	if err := c.ShouldBindJSON(&job); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+func NewHandler(usecase job_posting.UseCase) Handler {
+	return &handler{usecase: usecase}
+}
+
+type CreateJobPostingRequest struct {
+	CompanyID    int                           `json:"company_id" binding:"required"`
+	Title        string                        `json:"title" binding:"required,max=100"`
+	Description  *string                       `json:"description,omitempty" binding:"omitempty,max=1000"`
+	CustomFields []CreateJobCustomFieldRequest `json:"custom_fields,omitempty"`
+}
+
+type CreateJobCustomFieldRequest struct {
+	FieldName string `json:"field_name" binding:"required,max=50"`
+	Content   string `json:"content" binding:"required,max=500"`
+}
+
+func (h *handler) CreateJobPosting(c *gin.Context) {
+	var req CreateJobPostingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.usecase.Create(c.Request.Context(), &job); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
+	jobPosting := &entity.JobPosting{
+		CompanyID:   req.CompanyID,
+		Title:       req.Title,
+		Description: req.Description,
 	}
 
-	c.JSON(http.StatusCreated, job)
-}
+	for _, field := range req.CustomFields {
+		jobPosting.CustomFields = append(jobPosting.CustomFields, entity.JobCustomField{
+			FieldName: field.FieldName,
+			Content:   field.Content,
+		})
+	}
 
-// GetJobPostings は求人情報の一覧を取得します
-func (h *JobPostingHandler) GetJobPostings(c *gin.Context) {
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-
-	jobs, err := h.usecase.List(c.Request.Context(), (page-1)*limit, limit)
+	result, err := h.usecase.CreateJobPosting(c.Request.Context(), jobPosting)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, jobs)
+	c.JSON(http.StatusCreated, result)
 }
 
-// GetJobPosting は指定されたIDの求人情報を取得します
-func (h *JobPostingHandler) GetJobPosting(c *gin.Context) {
+func (h *handler) UpdateJobPosting(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id parameter"})
 		return
 	}
 
-	job, err := h.usecase.Get(c.Request.Context(), id)
+	var req CreateJobPostingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	jobPosting := &entity.JobPosting{
+		ID:          id,
+		CompanyID:   req.CompanyID,
+		Title:       req.Title,
+		Description: req.Description,
+	}
+
+	for _, field := range req.CustomFields {
+		jobPosting.CustomFields = append(jobPosting.CustomFields, entity.JobCustomField{
+			FieldName: field.FieldName,
+			Content:   field.Content,
+		})
+	}
+
+	result, err := h.usecase.UpdateJobPosting(c.Request.Context(), jobPosting)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if job == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Job posting not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, job)
+	c.JSON(http.StatusOK, result)
 }
 
-// UpdateJobPosting は既存の求人情報を更新します
-func (h *JobPostingHandler) UpdateJobPosting(c *gin.Context) {
+func (h *handler) DeleteJobPosting(c *gin.Context) {
 	id, err := strconv.Atoi(c.Param("id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id parameter"})
 		return
 	}
 
-	var job entity.JobPosting
-	if err := c.ShouldBindJSON(&job); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
-		return
-	}
-
-	job.ID = id
-	if err := h.usecase.Update(c.Request.Context(), &job); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, job)
-}
-
-// DeleteJobPosting は指定されたIDの求人情報を削除します
-func (h *JobPostingHandler) DeleteJobPosting(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID"})
-		return
-	}
-
-	if err := h.usecase.Delete(c.Request.Context(), id); err != nil {
+	if err := h.usecase.DeleteJobPosting(c.Request.Context(), id); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	c.Status(http.StatusNoContent)
-}
-
-// GetJobPostingsByCompanyID は指定された企業IDの求人情報一覧を取得します
-func (h *JobPostingHandler) GetJobPostingsByCompanyID(c *gin.Context) {
-	companyID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid company ID"})
-		return
-	}
-
-	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
-	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "10"))
-
-	response, err := h.usecase.ListByCompanyID(c.Request.Context(), companyID, (page-1)*limit, limit)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, response)
-}
-
-// GetCompanyWithJobPostings は企業情報と関連する求人情報を取得します
-func (h *JobPostingHandler) GetCompanyWithJobPostings(c *gin.Context) {
-	companyID, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid company ID"})
-		return
-	}
-
-	company, err := h.usecase.GetCompanyWithJobs(c.Request.Context(), companyID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	if company == nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, company)
 }

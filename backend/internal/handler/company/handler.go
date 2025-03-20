@@ -18,10 +18,10 @@ type Handler interface {
 }
 
 type handler struct {
-	usecase company.Usecase
+	usecase company.UseCase
 }
 
-func NewHandler(usecase company.Usecase) Handler {
+func NewHandler(usecase company.UseCase) Handler {
 	return &handler{usecase: usecase}
 }
 

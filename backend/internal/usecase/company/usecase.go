@@ -7,7 +7,7 @@ import (
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/repository"
 )
 
-type Usecase interface {
+type UseCase interface {
 	GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error)
 	CreateCompany(ctx context.Context, company *entity.Company) error
 	UpdateCompany(ctx context.Context, company *entity.Company) error
@@ -18,7 +18,7 @@ type usecase struct {
 	repo repository.CompanyRepository
 }
 
-func NewUsecase(repo repository.CompanyRepository) Usecase {
+func NewUseCase(repo repository.CompanyRepository) UseCase {
 	return &usecase{repo: repo}
 }
 
