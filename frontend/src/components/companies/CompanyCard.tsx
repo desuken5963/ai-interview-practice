@@ -3,51 +3,14 @@
 import { useState } from 'react';
 import { PlayIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
 import dynamic from 'next/dynamic';
-import { Company, CompanyInput, CustomField } from '@/lib/api/types';
+import { Company } from '@/lib/api/types';
 import { companyAPI } from '@/lib/api/client';
+import { IconButton } from '@/components/common/IconButton';
+import { ErrorMessage } from '@/components/common/ErrorMessage';
+import { CustomFieldsList } from '@/components/common/CustomFieldsList';
 
 const CompanyFormModal = dynamic(() => import('./CompanyFormModal'));
 const JobPostingListModal = dynamic(() => import('./JobPostingListModal'));
-
-type IconButtonProps = {
-  icon: React.ReactNode;
-  onClick: () => void;
-  className?: string;
-  label?: string;
-  children?: React.ReactNode;
-};
-
-function IconButton({ icon, onClick, className = '', label, children }: IconButtonProps) {
-  return (
-    <button
-      className={`inline-flex items-center ${className}`}
-      onClick={onClick}
-      aria-label={label}
-    >
-      {icon}
-      {children}
-    </button>
-  );
-}
-
-type ErrorMessageProps = {
-  message: string;
-  onClose: () => void;
-};
-
-function ErrorMessage({ message, onClose }: ErrorMessageProps) {
-  return (
-    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-      {message}
-      <button 
-        className="float-right font-bold"
-        onClick={onClose}
-      >
-        ×
-      </button>
-    </div>
-  );
-}
 
 function CompanyDescription({ description }: { description: string | null }) {
   if (!description) return null;
@@ -55,26 +18,6 @@ function CompanyDescription({ description }: { description: string | null }) {
     <p className="text-gray-600 mb-4 line-clamp-3">
       {description}
     </p>
-  );
-}
-
-function CustomFieldsList({ fields }: { fields: CustomField[] }) {
-  if (fields.length === 0) return null;
-  return (
-    <div className="mb-4">
-      <dl className="grid grid-cols-2 gap-2">
-        {fields.map((field, index) => (
-          <div key={index} className="col-span-1">
-            <dt className="text-sm font-medium text-gray-500">
-              {field.fieldName}
-            </dt>
-            <dd className="text-sm text-gray-900">
-              {field.content}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
   );
 }
 
@@ -121,6 +64,7 @@ export default function CompanyCard({
           <ErrorMessage
             message={error}
             onClose={() => setError(null)}
+            className="mb-4"
           />
         )}
 
@@ -153,7 +97,7 @@ export default function CompanyCard({
             label="求人一覧を表示"
           >
             <span>求人一覧</span>
-            <span className="font-semibold">({company.jobPostings?.length ?? 0})</span>
+            <span className="font-semibold">({company.jobPostings?.length || 0})</span>
           </IconButton>
           <IconButton
             icon={<PlayIcon className="w-4 h-4 mr-2" />}
