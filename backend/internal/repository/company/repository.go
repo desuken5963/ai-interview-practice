@@ -2,6 +2,7 @@ package company
 
 import (
 	"context"
+	"time"
 
 	"gorm.io/gorm"
 
@@ -46,23 +47,50 @@ func (r *companyRepository) GetCompanies(ctx context.Context, page, limit int) (
 	}, nil
 }
 
-func (r *companyRepository) GetCompanyByID(ctx context.Context, id int) (*entity.Company, error) {
-	var company entity.Company
-	if err := r.db.Preload("CustomFields").
-		Preload("JobPostings").
-		Preload("JobPostings.CustomFields").
-		First(&company, id).Error; err != nil {
-		return nil, err
-	}
-	return &company, nil
-}
-
 func (r *companyRepository) CreateCompany(ctx context.Context, company *entity.Company) error {
 	return r.db.Create(company).Error
 }
 
 func (r *companyRepository) UpdateCompany(ctx context.Context, company *entity.Company) error {
-	return r.db.Save(company).Error
+	// 既存の企業情報を取得
+	var existingCompany entity.Company
+	if err := r.db.First(&existingCompany, company.ID).Error; err != nil {
+		return err
+	}
+
+	// 更新対象のフィールドを設定
+	updates := map[string]interface{}{
+		"name":                 company.Name,
+		"business_description": company.BusinessDescription,
+		"updated_at":           time.Now(),
+	}
+
+	// トランザクションを開始
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		// 企業情報を更新
+		if err := tx.Model(&entity.Company{}).Where("id = ?", company.ID).Updates(updates).Error; err != nil {
+			return err
+		}
+
+		// 既存のカスタムフィールドを削除
+		if err := tx.Where("company_id = ?", company.ID).Delete(&entity.CompanyCustomField{}).Error; err != nil {
+			return err
+		}
+
+		// 新しいカスタムフィールドを作成
+		if len(company.CustomFields) > 0 {
+			for i := range company.CustomFields {
+				company.CustomFields[i].CompanyID = company.ID
+				company.CustomFields[i].CreatedAt = time.Now()
+				company.CustomFields[i].UpdatedAt = time.Now()
+			}
+			if err := tx.Create(&company.CustomFields).Error; err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
 
 func (r *companyRepository) DeleteCompany(ctx context.Context, id int) error {

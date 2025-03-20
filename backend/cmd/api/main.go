@@ -7,11 +7,10 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"github.com/takanoakira/ai-interview-practice/backend/internal/handler/company"
 	companyRepo "github.com/takanoakira/ai-interview-practice/backend/internal/repository/company"
-	jobRepo "github.com/takanoakira/ai-interview-practice/backend/internal/repository/job_posting"
+
 	"github.com/takanoakira/ai-interview-practice/backend/internal/routes"
-	companyUsecase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/company"
-	jobUsecase "github.com/takanoakira/ai-interview-practice/backend/internal/usecase/job_posting"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -42,19 +41,10 @@ func main() {
 	}
 
 	// リポジトリの初期化
-	companyRepository := companyRepo.NewCompanyRepository(db)
-	jobPostingRepository := jobRepo.NewJobPostingRepository(db)
+	companyRepository := companyRepo.NewRepository(db)
 
-	// ユースケースの初期化
-	// 企業関連のユースケース
-	getCompaniesUC := companyUsecase.NewGetCompaniesUsecase(companyRepository)
-	getCompanyUC := companyUsecase.NewGetCompanyUsecase(companyRepository)
-	createCompanyUC := companyUsecase.NewCreateCompanyUsecase(companyRepository)
-	updateCompanyUC := companyUsecase.NewUpdateCompanyUsecase(companyRepository)
-	deleteCompanyUC := companyUsecase.NewDeleteCompanyUsecase(companyRepository)
-
-	// 求人関連のユースケース
-	jobPostingUC := jobUsecase.NewJobPostingUsecase(jobPostingRepository)
+	// ハンドラーの初期化
+	companyHandler := company.NewHandler(companyRepository)
 
 	// ルーターの設定
 	router := gin.Default()
@@ -72,20 +62,7 @@ func main() {
 	})
 
 	// ハンドラーの登録
-	routes.RegisterCompanyRoutes(
-		router,
-		getCompaniesUC,
-		getCompanyUC,
-		createCompanyUC,
-		updateCompanyUC,
-		deleteCompanyUC,
-	)
-
-	// 求人ハンドラーの登録
-	routes.RegisterJobRoutes(
-		router,
-		jobPostingUC,
-	)
+	routes.SetupCompanyRoutes(router, companyHandler)
 
 	// サーバーの起動
 	port := os.Getenv("PORT")

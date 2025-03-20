@@ -12,7 +12,6 @@ import (
 
 type Handler interface {
 	GetCompanies(c *gin.Context)
-	GetCompanyByID(c *gin.Context)
 	CreateCompany(c *gin.Context)
 	UpdateCompany(c *gin.Context)
 	DeleteCompany(c *gin.Context)
@@ -41,22 +40,6 @@ func (h *handler) GetCompanies(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, companies)
-}
-
-func (h *handler) GetCompanyByID(c *gin.Context) {
-	id, err := strconv.Atoi(c.Param("id"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid company ID"})
-		return
-	}
-
-	company, err := h.usecase.GetCompanyByID(c.Request.Context(), id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Company not found"})
-		return
-	}
-
-	c.JSON(http.StatusOK, company)
 }
 
 func (h *handler) CreateCompany(c *gin.Context) {
@@ -93,7 +76,28 @@ func (h *handler) UpdateCompany(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusOK, company)
+	// 更新後の企業情報を取得
+	companies, err := h.usecase.GetCompanies(c.Request.Context(), 1, 100)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// 更新した企業を探す
+	var updatedCompany *entity.Company
+	for _, comp := range companies.Companies {
+		if comp.ID == id {
+			updatedCompany = &comp
+			break
+		}
+	}
+
+	if updatedCompany == nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Updated company not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, updatedCompany)
 }
 
 func (h *handler) DeleteCompany(c *gin.Context) {

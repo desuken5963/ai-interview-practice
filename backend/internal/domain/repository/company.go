@@ -11,9 +11,6 @@ type CompanyRepository interface {
 	// GetCompanies は企業一覧を取得します
 	GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error)
 
-	// GetCompanyByID は指定されたIDの企業情報を取得します
-	GetCompanyByID(ctx context.Context, id int) (*entity.Company, error)
-
 	// CreateCompany は新規の企業情報を作成します
 	CreateCompany(ctx context.Context, company *entity.Company) error
 

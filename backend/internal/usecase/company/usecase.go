@@ -9,7 +9,6 @@ import (
 
 type Usecase interface {
 	GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error)
-	GetCompanyByID(ctx context.Context, id int) (*entity.Company, error)
 	CreateCompany(ctx context.Context, company *entity.Company) error
 	UpdateCompany(ctx context.Context, company *entity.Company) error
 	DeleteCompany(ctx context.Context, id int) error
@@ -25,10 +24,6 @@ func NewUsecase(repo repository.CompanyRepository) Usecase {
 
 func (u *usecase) GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error) {
 	return u.repo.GetCompanies(ctx, page, limit)
-}
-
-func (u *usecase) GetCompanyByID(ctx context.Context, id int) (*entity.Company, error) {
-	return u.repo.GetCompanyByID(ctx, id)
 }
 
 func (u *usecase) CreateCompany(ctx context.Context, company *entity.Company) error {
