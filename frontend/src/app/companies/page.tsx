@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { useRouter } from 'next/navigation';
 import dynamic from 'next/dynamic';
-import { Company, CompanyInput } from '@/lib/api/types';
+import { Company, CompanyInput, JobPosting, JobPostingInput } from '@/lib/api/types';
 import { companyAPI } from '@/lib/api/client';
 
 // クライアントサイドのみでレンダリングするためにdynamic importを使用
 const CompanyCard = dynamic(() => import('@/components/companies/CompanyCard'));
 const CompanyFormModal = dynamic(() => import('@/components/companies/CompanyFormModal'));
 const JobPostingListModal = dynamic(() => import('@/components/companies/JobPostingListModal'));
+const JobPostingFormModal = dynamic(() => import('@/components/companies/JobPostingFormModal'));
 
 // Company型からCompanyInput型への変換関数
 const convertToCompanyInput = (company: Company | null): CompanyInput | undefined => {
@@ -30,7 +31,9 @@ export default function CompaniesPage() {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isCompanyFormModalOpen, setIsCompanyFormModalOpen] = useState(false);
   const [isJobPostingListModalOpen, setIsJobPostingListModalOpen] = useState(false);
+  const [isJobPostingFormModalOpen, setIsJobPostingFormModalOpen] = useState(false);
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [selectedJobPosting, setSelectedJobPosting] = useState<JobPosting | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -79,6 +82,27 @@ export default function CompaniesPage() {
   const handleCompanyFormSubmit = async () => {
     await fetchCompanies();
     setIsCompanyFormModalOpen(false);
+  };
+
+  const handleAddJobPosting = () => {
+    setIsJobPostingFormModalOpen(true);
+  };
+
+  const handleEditJobPosting = (jobPosting: JobPosting) => {
+    setSelectedJobPosting(jobPosting);
+    setIsJobPostingFormModalOpen(true);
+  };
+
+  const handleDeleteJobPosting = async (jobPostingId: number) => {
+    if (!window.confirm('この求人を削除してもよろしいですか？この操作は取り消せません。')) {
+      return;
+    }
+    await fetchCompanies();
+  };
+
+  const handleJobPostingFormSubmit = async (data: JobPostingInput) => {
+    await fetchCompanies();
+    setIsJobPostingFormModalOpen(false);
   };
 
   if (isLoading) {
@@ -132,9 +156,17 @@ export default function CompaniesPage() {
         onClose={() => setIsJobPostingListModalOpen(false)}
         companyName={selectedCompany?.name || ''}
         jobPostings={selectedCompany?.jobPostings || []}
-        onAddJobPosting={() => {/* 必要に応じて実装 */}}
-        onEditJobPosting={() => {/* 必要に応じて実装 */}}
-        onDeleteJobPosting={() => {/* 必要に応じて実装 */}}
+        onAddJobPosting={handleAddJobPosting}
+        onEditJobPosting={() => {}}
+        onDeleteJobPosting={() => {}}
+      />
+
+      <JobPostingFormModal
+        isOpen={isJobPostingFormModalOpen}
+        onClose={() => setIsJobPostingFormModalOpen(false)}
+        onSubmit={handleJobPostingFormSubmit}
+        initialData={selectedJobPosting || undefined}
+        companyName={selectedCompany?.name || ''}
       />
     </div>
   );

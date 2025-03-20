@@ -92,6 +92,8 @@ export type JobPostingResponse = {
 export type JobPostingInput = {
   title: string;
   description: string | null;
-  requirements: string | null;
-  custom_fields: CustomField[];
+  customFields: {
+    fieldName: string;
+    content: string;
+  }[];
 }; 

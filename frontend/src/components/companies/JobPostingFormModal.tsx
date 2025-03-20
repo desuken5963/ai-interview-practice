@@ -22,18 +22,16 @@ export default function JobPostingFormModal({
   const [formData, setFormData] = useState<JobPostingInput>({
     title: initialData?.title || '',
     description: initialData?.description || '',
-    requirements: initialData?.requirements || '',
-    custom_fields: initialData?.custom_fields || [],
+    customFields: initialData?.customFields || [],
   });
 
   const [errors, setErrors] = useState<{
     title?: string;
     description?: string;
-    requirements?: string;
-    custom_fields?: string;
+    customFields?: string;
     submit?: string;
-    [key: `custom_fields.${number}.field_name`]: string;
-    [key: `custom_fields.${number}.content`]: string;
+    [key: `customFields.${number}.fieldName`]: string;
+    [key: `customFields.${number}.content`]: string;
   }>({});
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,15 +43,13 @@ export default function JobPostingFormModal({
         setFormData({
           title: initialData.title,
           description: initialData.description,
-          requirements: initialData.requirements,
-          custom_fields: initialData.custom_fields,
+          customFields: initialData.customFields,
         });
       } else {
         setFormData({
           title: '',
           description: '',
-          requirements: '',
-          custom_fields: [{ field_name: '', content: '' }],
+          customFields: [{ fieldName: '', content: '' }],
         });
       }
       setErrors({});
@@ -79,19 +75,19 @@ export default function JobPostingFormModal({
   // カスタムフィールドの入力値を更新
   const handleCustomFieldChange = (
     index: number,
-    field: 'field_name' | 'content',
+    field: 'fieldName' | 'content',
     value: string
   ) => {
     setFormData((prev) => ({
       ...prev,
-      custom_fields: prev.custom_fields.map((item, i) =>
+      customFields: prev.customFields.map((item: { fieldName: string; content: string }, i: number) =>
         i === index ? { ...item, [field]: value } : item
       ),
     }));
     // エラーをクリア
     setErrors((prev) => ({
       ...prev,
-      [`custom_fields.${index}.${field}`]: undefined,
+      [`customFields.${index}.${field}`]: undefined,
     }));
   };
 
@@ -99,7 +95,7 @@ export default function JobPostingFormModal({
   const handleAddCustomField = () => {
     setFormData((prev) => ({
       ...prev,
-      custom_fields: [...prev.custom_fields, { field_name: '', content: '' }],
+      customFields: [...prev.customFields, { fieldName: '', content: '' }],
     }));
   };
 
@@ -107,7 +103,7 @@ export default function JobPostingFormModal({
   const handleRemoveCustomField = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      custom_fields: prev.custom_fields.filter((_, i) => i !== index),
+      customFields: prev.customFields.filter((_, i) => i !== index),
     }));
   };
 
@@ -119,12 +115,12 @@ export default function JobPostingFormModal({
       newErrors.title = '求人タイトルを入力してください';
     }
 
-    formData.custom_fields.forEach((field, index) => {
-      if (!field.field_name.trim()) {
-        newErrors[`custom_fields.${index}.field_name`] = '項目名を入力してください';
+    formData.customFields.forEach((field, index) => {
+      if (!field.fieldName.trim()) {
+        newErrors[`customFields.${index}.fieldName`] = '項目名を入力してください';
       }
       if (!field.content.trim()) {
-        newErrors[`custom_fields.${index}.content`] = '内容を入力してください';
+        newErrors[`customFields.${index}.content`] = '内容を入力してください';
       }
     });
 
@@ -224,24 +220,6 @@ export default function JobPostingFormModal({
                   />
                 </div>
 
-                {/* 応募要件 */}
-                <div>
-                  <label htmlFor="requirements" className="block text-sm font-medium text-gray-700 mb-1">
-                    応募要件
-                  </label>
-                  <textarea
-                    id="requirements"
-                    name="requirements"
-                    rows={4}
-                    value={formData.requirements || ''}
-                    onChange={handleInputChange}
-                    className={`block w-full px-4 py-2 rounded-md border ${
-                      errors.requirements ? 'border-red-300' : 'border-gray-300'
-                    } text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                    placeholder="応募に必要な条件や資格などを入力"
-                  />
-                </div>
-
                 {/* カスタムフィールド */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
@@ -259,36 +237,34 @@ export default function JobPostingFormModal({
                   </div>
 
                   <div className="space-y-4">
-                    {formData.custom_fields.map((field, index) => (
+                    {formData.customFields.map((field, index) => (
                       <div key={index} className="p-4 border border-gray-200 rounded-md bg-gray-50">
                         <div className="flex justify-between items-center mb-2">
                           <label className="text-sm font-medium text-gray-700">項目 {index + 1}</label>
-                          {formData.custom_fields.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => handleRemoveCustomField(index)}
-                              className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100"
-                            >
-                              <TrashIcon className="w-5 h-5" />
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCustomField(index)}
+                            className="p-1 text-gray-400 hover:text-red-600 rounded-full hover:bg-gray-100"
+                          >
+                            <TrashIcon className="w-5 h-5" />
+                          </button>
                         </div>
                         <div className="space-y-3">
                           <div>
                             <input
                               type="text"
-                              value={field.field_name}
+                              value={field.fieldName}
                               onChange={(e) =>
-                                handleCustomFieldChange(index, 'field_name', e.target.value)
+                                handleCustomFieldChange(index, 'fieldName', e.target.value)
                               }
                               placeholder="項目名（例：勤務地、給与）"
                               className={`block w-full px-4 py-2 rounded-md border ${
-                                errors[`custom_fields.${index}.field_name`] ? 'border-red-300' : 'border-gray-300'
+                                errors[`customFields.${index}.fieldName`] ? 'border-red-300' : 'border-gray-300'
                               } text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                             />
-                            {errors[`custom_fields.${index}.field_name`] && (
+                            {errors[`customFields.${index}.fieldName`] && (
                               <p className="mt-1 text-sm text-red-600">
-                                {errors[`custom_fields.${index}.field_name`]}
+                                {errors[`customFields.${index}.fieldName`]}
                               </p>
                             )}
                           </div>
@@ -301,12 +277,12 @@ export default function JobPostingFormModal({
                               }
                               placeholder="内容（例：東京都、年収500万円〜）"
                               className={`block w-full px-4 py-2 rounded-md border ${
-                                errors[`custom_fields.${index}.content`] ? 'border-red-300' : 'border-gray-300'
+                                errors[`customFields.${index}.content`] ? 'border-red-300' : 'border-gray-300'
                               } text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
                             />
-                            {errors[`custom_fields.${index}.content`] && (
+                            {errors[`customFields.${index}.content`] && (
                               <p className="mt-1 text-sm text-red-600">
-                                {errors[`custom_fields.${index}.content`]}
+                                {errors[`customFields.${index}.content`]}
                               </p>
                             )}
                           </div>
