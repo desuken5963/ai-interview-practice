@@ -6,18 +6,20 @@ import (
 	"github.com/takanoakira/ai-interview-practice/backend/internal/domain/entity"
 )
 
+// CompanyRepository は企業情報のリポジトリインターフェースです
 type CompanyRepository interface {
-	// 基本的なCRUD操作
-	Create(ctx context.Context, company *entity.Company) error
-	FindByID(ctx context.Context, id int) (*entity.Company, error)
-	Update(ctx context.Context, company *entity.Company) error
-	Delete(ctx context.Context, id int) error
+	// GetCompanies は企業一覧を取得します
+	GetCompanies(ctx context.Context, page, limit int) (*entity.CompanyResponse, error)
 
-	// 一覧取得
-	List(ctx context.Context, offset, limit int) ([]*entity.Company, error)
-	// 総数取得
-	Count(ctx context.Context) (int64, error)
+	// GetCompanyByID は指定されたIDの企業情報を取得します
+	GetCompanyByID(ctx context.Context, id int) (*entity.Company, error)
 
-	// 関連データを含む取得
-	FindWithJobs(ctx context.Context, id int) (*entity.Company, error)
+	// CreateCompany は新規の企業情報を作成します
+	CreateCompany(ctx context.Context, company *entity.Company) error
+
+	// UpdateCompany は既存の企業情報を更新します
+	UpdateCompany(ctx context.Context, company *entity.Company) error
+
+	// DeleteCompany は指定されたIDの企業情報を削除します
+	DeleteCompany(ctx context.Context, id int) error
 }
