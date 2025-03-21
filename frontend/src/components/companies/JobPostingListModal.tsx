@@ -15,6 +15,110 @@ type JobPostingListModalProps = {
   onSuccess: () => void;
 };
 
+type JobPostingItemProps = {
+  jobPosting: JobPosting;
+  onEdit: (jobPosting: JobPosting) => void;
+  onDelete: (id: number) => void;
+};
+
+function JobPostingItem({ jobPosting, onEdit, onDelete }: JobPostingItemProps) {
+  return (
+    <div className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow">
+      <div className="flex justify-between items-start mb-2 gap-4">
+        <h4 className="text-base sm:text-lg font-medium text-gray-900 line-clamp-2">
+          {jobPosting.title}
+        </h4>
+        <div className="flex gap-1 sm:gap-2 flex-shrink-0">
+          <button
+            onClick={() => onEdit(jobPosting)}
+            className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            <PencilIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+          <button
+            onClick={() => onDelete(jobPosting.id)}
+            className="p-1 text-gray-500 hover:text-red-600 transition-colors"
+          >
+            <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        </div>
+      </div>
+
+      {jobPosting.description && (
+        <p className="text-sm sm:text-base text-gray-600 mb-3 line-clamp-2">
+          {jobPosting.description}
+        </p>
+      )}
+
+      {jobPosting.customFields.length > 0 && (
+        <div className="mb-3">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {jobPosting.customFields.map((field, index) => (
+              <div key={index} className="col-span-1">
+                <dt className="text-xs sm:text-sm font-medium text-gray-500">
+                  {field.fieldName}
+                </dt>
+                <dd className="text-xs sm:text-sm text-gray-900">
+                  {field.content}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
+        <div className="text-xs sm:text-sm text-gray-500">
+          登録日: {new Date(jobPosting.createdAt).toLocaleDateString('ja-JP', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </div>
+        <button
+          className="w-full sm:w-auto inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
+          onClick={() => {/* TODO: 面接練習機能の実装 */}}
+        >
+          <PlayIcon className="w-4 h-4 mr-2" />
+          面接練習
+        </button>
+      </div>
+    </div>
+  );
+}
+
+type PaginationProps = {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+};
+
+function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+  if (totalPages <= 1) return null;
+
+  return (
+    <div className="flex justify-center items-center gap-2 mt-4">
+      <button
+        onClick={() => onPageChange(Math.max(currentPage - 1, 1))}
+        disabled={currentPage === 1}
+        className="px-3 py-1 text-sm bg-gray-100 rounded-md disabled:opacity-50"
+      >
+        前へ
+      </button>
+      <span className="text-sm text-gray-600">
+        {currentPage} / {totalPages}
+      </span>
+      <button
+        onClick={() => onPageChange(Math.min(currentPage + 1, totalPages))}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1 text-sm bg-gray-100 rounded-md disabled:opacity-50"
+      >
+        次へ
+      </button>
+    </div>
+  );
+}
+
 export default function JobPostingListModal({
   isOpen,
   onClose,
@@ -26,13 +130,12 @@ export default function JobPostingListModal({
   const [isJobPostingFormModalOpen, setIsJobPostingFormModalOpen] = useState(false);
   const itemsPerPage = 5;
   const jobPostings = company?.jobPostings || [];
-  const totalPages = Math.ceil((jobPostings?.length || 0) / itemsPerPage);
+  const totalPages = Math.ceil(jobPostings.length / itemsPerPage);
 
-  // 現在のページの求人を取得
-  const currentJobPostings = jobPostings?.slice(
+  const currentJobPostings = jobPostings.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
-  ) || [];
+  );
 
   const handleAddJobPosting = () => {
     setSelectedJobPosting(null);
@@ -60,15 +163,6 @@ export default function JobPostingListModal({
     onSuccess();
     setIsJobPostingFormModalOpen(false);
     setSelectedJobPosting(null);
-  };
-
-  // 日付フォーマット関数
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
   };
 
   if (!isOpen) return null;
@@ -105,92 +199,28 @@ export default function JobPostingListModal({
 
               <div className="space-y-4">
                 {currentJobPostings.map((jobPosting) => (
-                  <div
+                  <JobPostingItem
                     key={jobPosting.id}
-                    className="border border-gray-200 rounded-lg p-3 sm:p-4 hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex justify-between items-start mb-2 gap-4">
-                      <h4 className="text-base sm:text-lg font-medium text-gray-900 line-clamp-2">{jobPosting.title}</h4>
-                      <div className="flex gap-1 sm:gap-2 flex-shrink-0">
-                        <button
-                          onClick={() => handleEditJobPosting(jobPosting)}
-                          className="p-1 text-gray-500 hover:text-gray-700 transition-colors"
-                        >
-                          <PencilIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteJobPosting(jobPosting.id)}
-                          className="p-1 text-gray-500 hover:text-red-600 transition-colors"
-                        >
-                          <TrashIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {jobPosting.description && (
-                      <p className="text-sm sm:text-base text-gray-600 mb-3 line-clamp-2">{jobPosting.description}</p>
-                    )}
-
-                    {jobPosting.customFields.length > 0 && (
-                      <div className="mb-3">
-                        <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {jobPosting.customFields.map((field, index) => (
-                            <div key={index} className="col-span-1">
-                              <dt className="text-xs sm:text-sm font-medium text-gray-500">
-                                {field.fieldName}
-                              </dt>
-                              <dd className="text-xs sm:text-sm text-gray-900">
-                                {field.content}
-                              </dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </div>
-                    )}
-
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-0">
-                      <div className="text-xs sm:text-sm text-gray-500">
-                        登録日: {formatDate(jobPosting.createdAt)}
-                      </div>
-                      <button
-                        className="w-full sm:w-auto inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
-                        onClick={() => {/* 面接練習を開始 */}}
-                      >
-                        <PlayIcon className="w-4 h-4 mr-2" />
-                        面接練習
-                      </button>
-                    </div>
-                  </div>
+                    jobPosting={jobPosting}
+                    onEdit={handleEditJobPosting}
+                    onDelete={handleDeleteJobPosting}
+                  />
                 ))}
 
                 {jobPostings.length === 0 && (
                   <div className="text-center py-8">
-                    <p className="text-sm sm:text-base text-gray-500">登録されている求人はありません</p>
+                    <p className="text-sm sm:text-base text-gray-500">
+                      登録されている求人はありません
+                    </p>
                   </div>
                 )}
               </div>
 
-              {totalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 mt-4">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 text-sm bg-gray-100 rounded-md disabled:opacity-50"
-                  >
-                    前へ
-                  </button>
-                  <span className="text-sm text-gray-600">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 text-sm bg-gray-100 rounded-md disabled:opacity-50"
-                  >
-                    次へ
-                  </button>
-                </div>
-              )}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={setCurrentPage}
+              />
             </div>
           </div>
         </div>
