@@ -118,15 +118,26 @@ export default function JobPostingFormModal({
     const newErrors: typeof errors = {};
 
     if (!formData.title.trim()) {
-      newErrors.title = '求人タイトルを入力してください';
+      newErrors.title = '求人タイトルは必須です';
+    } else if (formData.title.length > 100) {
+      newErrors.title = '求人タイトルは100文字以内で入力してください';
+    }
+
+    if (formData.description && formData.description.length > 1000) {
+      newErrors.description = '求人詳細は1000文字以内で入力してください';
     }
 
     formData.customFields.forEach((field, index) => {
       if (!field.fieldName.trim()) {
-        newErrors[`customFields.${index}.fieldName`] = '項目名を入力してください';
+        newErrors[`customFields.${index}.fieldName`] = '項目名は必須です';
+      } else if (field.fieldName.length > 50) {
+        newErrors[`customFields.${index}.fieldName`] = '項目名は50文字以内で入力してください';
       }
+
       if (!field.content.trim()) {
-        newErrors[`customFields.${index}.content`] = '内容を入力してください';
+        newErrors[`customFields.${index}.content`] = '内容は必須です';
+      } else if (field.content.length > 500) {
+        newErrors[`customFields.${index}.content`] = '内容は500文字以内で入力してください';
       }
     });
 
