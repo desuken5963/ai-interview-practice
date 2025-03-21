@@ -8,7 +8,9 @@ import {
   CustomField,
   APICustomField,
   JobPosting,
-  APIJobPosting
+  APIJobPosting,
+  JobPostingResponse,
+  JobPostingInput
 } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
@@ -42,7 +44,7 @@ function convertCompany(company: APICompany): Company {
     name: company.name,
     businessDescription: company.business_description,
     customFields: company.custom_fields.map(convertCustomField),
-    jobPostings: company.job_postings.map(convertJobPosting),
+    jobPostings: company.job_postings?.map(convertJobPosting) || [],
     createdAt: company.created_at,
     updatedAt: company.updated_at,
   };
@@ -60,6 +62,15 @@ function convertToAPICompanyInput(input: CompanyInput): any {
   return {
     name: input.name,
     business_description: input.businessDescription,
+    custom_fields: input.customFields.map(convertToAPICustomField),
+  };
+}
+
+function convertToAPIJobPostingInput(input: JobPostingInput, companyId?: number): any {
+  return {
+    company_id: companyId,
+    title: input.title,
+    description: input.description,
     custom_fields: input.customFields.map(convertToAPICustomField),
   };
 }
@@ -154,19 +165,27 @@ export const jobPostingAPI = {
   getJobPosting: (id: number) => fetchAPI<JobPosting>(`/api/v1/job-postings/${id}`),
   
   // 求人を作成
-  createJobPosting: (companyId: number, data: JobPostingInput) => fetchAPI<JobPosting>(`/api/v1/companies/${companyId}/job-postings`, {
-    method: 'POST',
-    body: JSON.stringify(data),
-  }),
+  createJobPosting: async (companyId: number, data: JobPostingInput) => {
+    const apiData = convertToAPIJobPostingInput(data, companyId);
+    const response = await fetchAPI<APIJobPosting>('/api/v1/job-postings', {
+      method: 'POST',
+      body: JSON.stringify(apiData),
+    });
+    return convertJobPosting(response);
+  },
   
   // 求人を更新
-  updateJobPosting: (id: number, data: JobPostingInput) => fetchAPI<JobPosting>(`/api/v1/job-postings/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(data),
-  }),
+  updateJobPosting: async (id: number, data: JobPostingInput & { company_id: number }) => {
+    const apiData = convertToAPIJobPostingInput(data, data.company_id);
+    const response = await fetchAPI<APIJobPosting>(`/api/v1/job-postings/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(apiData),
+    });
+    return convertJobPosting(response);
+  },
   
   // 求人を削除
   deleteJobPosting: (id: number) => fetchAPI<void>(`/api/v1/job-postings/${id}`, {
     method: 'DELETE',
   }),
-}; 
+};

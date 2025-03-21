@@ -146,7 +146,10 @@ export default function JobPostingFormModal({
     try {
       if (jobPosting) {
         // 編集の場合
-        await jobPostingAPI.updateJobPosting(jobPosting.id, formData);
+        await jobPostingAPI.updateJobPosting(jobPosting.id, {
+          ...formData,
+          company_id: companyId,
+        });
       } else {
         // 新規登録の場合
         await jobPostingAPI.createJobPosting(companyId, formData);
