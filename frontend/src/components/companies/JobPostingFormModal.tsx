@@ -2,31 +2,35 @@
 
 import { useState, useEffect } from 'react';
 import { XMarkIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { Company, CompanyInput } from '@/lib/api/types';
-import { companyAPI } from '@/lib/api/client';
+import { JobPosting, JobPostingInput } from '@/lib/api/types';
+import { jobPostingAPI } from '@/lib/api/client';
 
-type CompanyFormModalProps = {
+type JobPostingFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  company?: Company;
+  jobPosting?: JobPosting;
+  companyId: number;
+  companyName: string;
 };
 
-export default function CompanyFormModal({
+export default function JobPostingFormModal({
   isOpen,
   onClose,
   onSuccess,
-  company,
-}: CompanyFormModalProps) {
-  const [formData, setFormData] = useState<CompanyInput>({
-    name: '',
-    businessDescription: '',
+  jobPosting,
+  companyId,
+  companyName,
+}: JobPostingFormModalProps) {
+  const [formData, setFormData] = useState<JobPostingInput>({
+    title: '',
+    description: '',
     customFields: [],
   });
 
   const [errors, setErrors] = useState<{
-    name?: string;
-    businessDescription?: string;
+    title?: string;
+    description?: string;
     customFields?: string;
     submit?: string;
     [key: `customFields.${number}.fieldName`]: string;
@@ -38,38 +42,89 @@ export default function CompanyFormModal({
   // モーダルが開かれた時にフォームをリセット
   useEffect(() => {
     if (isOpen) {
-      if (company) {
+      if (jobPosting) {
         setFormData({
-          name: company.name,
-          businessDescription: company.businessDescription,
-          customFields: company.customFields.map(field => ({
+          title: jobPosting.title,
+          description: jobPosting.description || '',
+          customFields: jobPosting.customFields.map(field => ({
             fieldName: field.fieldName,
             content: field.content,
           })),
         });
       } else {
         setFormData({
-          name: '',
-          businessDescription: '',
+          title: '',
+          description: '',
           customFields: [{ fieldName: '', content: '' }],
         });
       }
       setErrors({});
     }
-  }, [isOpen, company]);
+  }, [isOpen, jobPosting]);
 
-  // バリデーション関数
+  // フォームの入力値を更新
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+    // エラーをクリア
+    setErrors((prev) => ({
+      ...prev,
+      [name]: undefined,
+    }));
+  };
+
+  // カスタムフィールドの入力値を更新
+  const handleCustomFieldChange = (
+    index: number,
+    field: 'fieldName' | 'content',
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      customFields: prev.customFields.map((item: { fieldName: string; content: string }, i: number) =>
+        i === index ? { ...item, [field]: value } : item
+      ),
+    }));
+    // エラーをクリア
+    setErrors((prev) => ({
+      ...prev,
+      [`customFields.${index}.${field}`]: undefined,
+    }));
+  };
+
+  // カスタムフィールドを追加
+  const handleAddCustomField = () => {
+    setFormData((prev) => ({
+      ...prev,
+      customFields: [...prev.customFields, { fieldName: '', content: '' }],
+    }));
+  };
+
+  // カスタムフィールドを削除
+  const handleRemoveCustomField = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      customFields: prev.customFields.filter((_, i) => i !== index),
+    }));
+  };
+
+  // フォームのバリデーション
   const validateForm = () => {
     const newErrors: typeof errors = {};
 
-    if (!formData.name.trim()) {
-      newErrors.name = '企業名は必須です';
-    } else if (formData.name.length > 100) {
-      newErrors.name = '企業名は100文字以内で入力してください';
+    if (!formData.title.trim()) {
+      newErrors.title = '求人タイトルは必須です';
+    } else if (formData.title.length > 100) {
+      newErrors.title = '求人タイトルは100文字以内で入力してください';
     }
 
-    if (formData.businessDescription && formData.businessDescription.length > 1000) {
-      newErrors.businessDescription = '事業内容は1000文字以内で入力してください';
+    if (formData.description && formData.description.length > 1000) {
+      newErrors.description = '求人詳細は1000文字以内で入力してください';
     }
 
     formData.customFields.forEach((field, index) => {
@@ -90,26 +145,7 @@ export default function CompanyFormModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  // カスタムフィールドの追加
-  const handleAddCustomField = () => {
-    setFormData(prev => ({
-      ...prev,
-      customFields: [
-        ...prev.customFields,
-        { fieldName: '', content: '' }
-      ]
-    }));
-  };
-
-  // カスタムフィールドの削除
-  const handleRemoveCustomField = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      customFields: prev.customFields.filter((_, i) => i !== index)
-    }));
-  };
-
-  // フォーム送信
+  // フォームの送信
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -119,12 +155,15 @@ export default function CompanyFormModal({
 
     setIsSubmitting(true);
     try {
-      if (company) {
+      if (jobPosting) {
         // 編集の場合
-        await companyAPI.updateCompany(company.id, formData);
+        await jobPostingAPI.updateJobPosting(jobPosting.id, {
+          ...formData,
+          company_id: companyId,
+        });
       } else {
         // 新規登録の場合
-        await companyAPI.createCompany(formData);
+        await jobPostingAPI.createJobPosting(companyId, formData);
       }
       onSuccess();
       onClose();
@@ -151,7 +190,7 @@ export default function CompanyFormModal({
             <div className="bg-white px-4 pb-6 pt-5 sm:p-6">
               <div className="flex items-start justify-between mb-4">
                 <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
-                  {company ? '企業情報を編集' : '企業を登録'}
+                  {jobPosting ? '求人を編集' : '求人を追加'} - {companyName}
                 </h3>
                 <button
                   type="button"
@@ -169,51 +208,50 @@ export default function CompanyFormModal({
               )}
 
               <div className="space-y-4">
-                {/* 企業名 */}
+                {/* 求人タイトル */}
                 <div>
-                  <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                    企業名 <span className="text-red-500">*</span>
+                  <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-1">
+                    求人タイトル <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="text"
-                    id="name"
-                    value={formData.name}
-                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    id="title"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
                     className={`block w-full px-4 py-2 rounded-md border ${
-                      errors.name ? 'border-red-300' : 'border-gray-300'
+                      errors.title ? 'border-red-300' : 'border-gray-300'
                     } text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                    placeholder="企業名を入力"
+                    placeholder="求人タイトルを入力"
                   />
-                  {errors.name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                  {errors.title && (
+                    <p className="mt-1 text-sm text-red-600">{errors.title}</p>
                   )}
                 </div>
 
-                {/* 事業内容 */}
+                {/* 求人詳細 */}
                 <div>
-                  <label htmlFor="businessDescription" className="block text-sm font-medium text-gray-700 mb-1">
-                    事業内容
+                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                    求人詳細
                   </label>
                   <textarea
-                    id="businessDescription"
-                    value={formData.businessDescription || ''}
-                    onChange={(e) => setFormData(prev => ({ ...prev, businessDescription: e.target.value }))}
+                    id="description"
+                    name="description"
                     rows={4}
+                    value={formData.description || ''}
+                    onChange={handleInputChange}
                     className={`block w-full px-4 py-2 rounded-md border ${
-                      errors.businessDescription ? 'border-red-300' : 'border-gray-300'
+                      errors.description ? 'border-red-300' : 'border-gray-300'
                     } text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
-                    placeholder="事業内容を入力"
+                    placeholder="求人の詳細情報を入力"
                   />
-                  {errors.businessDescription && (
-                    <p className="mt-1 text-sm text-red-600">{errors.businessDescription}</p>
-                  )}
                 </div>
 
-                {/* カスタム項目 */}
+                {/* カスタムフィールド */}
                 <div>
                   <div className="flex justify-between items-center mb-2">
                     <label className="block text-sm font-medium text-gray-700">
-                      追加情報
+                      カスタムフィールド
                     </label>
                     <button
                       type="button"
@@ -221,7 +259,7 @@ export default function CompanyFormModal({
                       className="inline-flex items-center px-3 py-1.5 text-sm bg-blue-50 text-blue-600 rounded-md hover:bg-blue-100 transition-colors"
                     >
                       <PlusIcon className="w-4 h-4 mr-1" />
-                      項目を追加
+                      追加
                     </button>
                   </div>
 
@@ -243,12 +281,10 @@ export default function CompanyFormModal({
                             <input
                               type="text"
                               value={field.fieldName}
-                              onChange={(e) => {
-                                const newFields = [...formData.customFields];
-                                newFields[index].fieldName = e.target.value;
-                                setFormData(prev => ({ ...prev, customFields: newFields }));
-                              }}
-                              placeholder="項目名（例：業界、従業員数）"
+                              onChange={(e) =>
+                                handleCustomFieldChange(index, 'fieldName', e.target.value)
+                              }
+                              placeholder="項目名（例：勤務地、給与）"
                               className={`block w-full px-4 py-2 rounded-md border ${
                                 errors[`customFields.${index}.fieldName`] ? 'border-red-300' : 'border-gray-300'
                               } text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
@@ -263,12 +299,10 @@ export default function CompanyFormModal({
                             <input
                               type="text"
                               value={field.content}
-                              onChange={(e) => {
-                                const newFields = [...formData.customFields];
-                                newFields[index].content = e.target.value;
-                                setFormData(prev => ({ ...prev, customFields: newFields }));
-                              }}
-                              placeholder="内容を入力"
+                              onChange={(e) =>
+                                handleCustomFieldChange(index, 'content', e.target.value)
+                              }
+                              placeholder="内容（例：東京都、年収500万円〜）"
                               className={`block w-full px-4 py-2 rounded-md border ${
                                 errors[`customFields.${index}.content`] ? 'border-red-300' : 'border-gray-300'
                               } text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500`}
@@ -285,23 +319,31 @@ export default function CompanyFormModal({
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="mt-6 flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="inline-flex justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                >
-                  {isSubmitting ? '保存中...' : '保存'}
-                </button>
-              </div>
+            <div className="bg-gray-50 px-4 py-4 sm:px-6 sm:flex sm:flex-row-reverse border-t border-gray-200">
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full sm:w-auto inline-flex justify-center items-center rounded-md bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed sm:ml-3"
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></span>
+                    保存中...
+                  </>
+                ) : (
+                  jobPosting ? '更新する' : '登録する'
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="mt-3 sm:mt-0 w-full sm:w-auto inline-flex justify-center items-center rounded-md bg-white px-5 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                キャンセル
+              </button>
             </div>
           </form>
         </div>

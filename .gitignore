@@ -26,3 +26,9 @@ go.work.sum
 
 # memo file
 /memo
+
+# Air tmp directory
+/backend/tmp/
+
+# 環境変数ファイル
+.env

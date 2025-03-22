@@ -121,8 +121,8 @@ AI面接練習後の評価・フィードバック機能の基本設計を記載
 ### 3.1 面接評価テーブル (interview_evaluations)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
-| session_id | UUID | 面接セッションID (FK) | NO |
+| id | INT | 主キー（自動採番） | NO |
+| session_id | INT | 面接セッションID (FK) | NO |
 | total_rank | ENUM('A','B','C','D','E') | 総合ランク | NO |
 | total_score | INTEGER | 総合スコア（0-100） | NO |
 | overall_comment | TEXT | 総評コメント | NO |
@@ -137,9 +137,9 @@ AI面接練習後の評価・フィードバック機能の基本設計を記載
 ### 3.2 回答評価テーブル (answer_evaluations)
 | カラム名 | 型 | 説明 | NULL |
 |---------|-----|------|------|
-| id | UUID | 主キー | NO |
-| session_id | UUID | 面接セッションID (FK) | NO |
-| question_id | UUID | 面接質問ID (FK) | NO |
+| id | INT | 主キー（自動採番） | NO |
+| session_id | INT | 面接セッションID (FK) | NO |
+| question_id | INT | 面接質問ID (FK) | NO |
 | logical_score | INTEGER | 論理的思考力スコア（0-100） | NO |
 | communication_score | INTEGER | コミュニケーション力スコア（0-100） | NO |
 | technical_score | INTEGER | 技術力スコア（0-100） | NO |

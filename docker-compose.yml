@@ -1,10 +1,43 @@
 services:
-  backend:
-    build: ./backend
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    volumes:
+      - ./backend:/api
+      - ./mysql/my.cnf:/root/.my.cnf
     ports:
       - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - backend/.env
+    networks:
+      - app-network
+
+  db:
+    image: mysql:8.0
+    platform: linux/amd64
+    container_name: ai_interview_db
+    env_file:
+      - backend/.env
     volumes:
-      - ./backend:/app
-    environment:
-      - GO_ENV=development
-    command: ["go", "run", "main.go"]
+      - mysql_data:/var/lib/mysql
+      - ./mysql/my.cnf:/etc/mysql/conf.d/my.cnf
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+volumes:
+  mysql_data:
+
+networks:
+  app-network:
+    driver: bridge

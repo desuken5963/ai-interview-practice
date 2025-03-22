@@ -16,9 +16,40 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## バックエンドとの連携
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+このフロントエンドアプリケーションは、バックエンドAPIと連携して動作します。バックエンドAPIは以下の手順で起動してください。
+
+1. バックエンドディレクトリに移動します。
+```bash
+cd ../backend
+```
+
+2. バックエンドサーバーを起動します。
+```bash
+make run
+```
+
+3. バックエンドサーバーが `http://localhost:8080` で起動します。
+
+## 環境変数の設定
+
+フロントエンドとバックエンドの連携には、環境変数の設定が必要です。`.env.local` ファイルを作成して、以下の環境変数を設定してください。
+
+```
+NEXT_PUBLIC_API_URL=http://localhost:8080
+```
+
+バックエンドのURLが異なる場合は、適宜変更してください。
+
+## API連携の仕組み
+
+フロントエンドとバックエンドの連携は、`src/lib/api/client.ts` で定義されたAPIクライアントを通じて行われます。このクライアントは、以下の機能を提供します。
+
+- 企業情報の取得、作成、更新、削除
+- 求人情報の取得、作成、更新、削除
+
+APIクライアントは、環境変数 `NEXT_PUBLIC_API_URL` で指定されたバックエンドAPIのURLに対してリクエストを送信します。
 
 ## Learn More
 
