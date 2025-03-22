@@ -115,8 +115,8 @@ async function fetchAPI<T>(
 // 企業情報のAPI関数
 export const companyAPI = {
   // 企業一覧を取得
-  getCompanies: async () => {
-    const response = await fetchAPI<APICompanyListResponse>('/api/v1/companies');
+  getCompanies: async (page: number = 1, limit: number = 6) => {
+    const response = await fetchAPI<APICompanyListResponse>(`/api/v1/companies?page=${page}&limit=${limit}`);
     return {
       companies: response.companies.map(convertCompany),
       total: response.total,
